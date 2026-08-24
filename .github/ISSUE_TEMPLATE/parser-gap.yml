@@ -1,0 +1,56 @@
+name: Parser gap
+description: A configuration construct the cascade did not handle correctly
+title: "[Parser] "
+labels: ["parser", "track-a"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A line falling through to Tier 1 or Tier 2 is **normal**, not a bug. This template is for
+        the cases that matter: a line parsed into the wrong IR field, a line silently dropped
+        without being counted, or coverage that does not add up.
+
+  - type: input
+    id: vendor
+    attributes:
+      label: Vendor and OS version
+      placeholder: "Fortinet FortiOS 7.4.4"
+    validations:
+      required: true
+
+  - type: textarea
+    id: raw
+    attributes:
+      label: The configuration lines
+      description: Verbatim, with any real addresses, hostnames and credentials removed.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: expected
+    attributes:
+      label: Expected IR path and value
+      placeholder: "mgmt.idle_timeout_min = 10"
+    validations:
+      required: true
+
+  - type: input
+    id: actual
+    attributes:
+      label: What actually happened
+      placeholder: "Dropped silently; coverage counted it as parsed"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Which invariant does this threaten
+      options:
+        - "Invariant 2 - a finding cites the wrong line"
+        - "Invariant 3 - something unparsed became a PASS"
+        - "Invariant 4 - coverage does not add up"
+        - "None - a mapping is merely absent, and falls through as designed"
+    validations:
+      required: true
