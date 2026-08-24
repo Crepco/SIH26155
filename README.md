@@ -127,10 +127,29 @@ The problem statement names five required components. Each maps to a directory a
 | 4. Actionable Intelligence & PDF Reporting | `backend/crucible/report` · [docs/10](docs/10-reporting.md) |
 | 5. Vendor-Agnostic Scalability | `schemas/ir` + `adapters/` · [docs/03](docs/03-ir-schema.md) |
 
+## Roadmap
+
+| Phase | Dates | Headline | Definition of done |
+|-------|-------|----------|--------------------|
+| 0 | 25–31 Aug | Foundations | IR schema frozen, 60+ real configs collected, 20 hand-labelled |
+| 1 | 1–7 Sep | Core pipeline end to end | Upload a real Cisco config, get a correct line-cited PDF |
+| 2 | 8–14 Sep | The AI layer | Hold out a vendor, train it cold in under three minutes, export the pack |
+| 3 | 15–19 Sep | Differentiators | A demo that survives an audience, and a real accuracy figure |
+| — | **20 Sep** | **Idea submission closes** | Four artefacts, each mapped to the five-component list |
+| 4 | 21 Sep on | Crucible | `crucible verify` confirms a finding live, under 15 s, offline |
+| 5 | Pre-finale | Hardening | Something that looks like a product, not a prototype |
+
+Full plan with owners and risks: [docs/12-execution-plan.md](docs/12-execution-plan.md) ·
+[docs/14-risk-register.md](docs/14-risk-register.md) · [CHANGELOG.md](CHANGELOG.md).
+
 ## Getting started
 
-Setup instructions land with Phase 1. Until then, read
-[docs/00-index.md](docs/00-index.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+Setup instructions land with Phase 1. Until then:
+
+- [docs/00-index.md](docs/00-index.md) — every specification, in reading order
+- [CONTRIBUTING.md](CONTRIBUTING.md) — track ownership, branch and commit conventions, and the
+  seven rules a review will reject a PR for
+- [docs/adr/](docs/adr/) — decisions already made, and not re-litigated
 
 ## Licence
 
