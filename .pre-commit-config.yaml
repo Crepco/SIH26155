@@ -1,0 +1,57 @@
+# ---------------------------------------------------------------------------
+# pre-commit install
+#
+# The hooks that matter here are not the formatting ones. They are the two that
+# prevent an unrecoverable mistake: committing real device configuration data,
+# and committing key material.
+# ---------------------------------------------------------------------------
+
+repos:
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^corpus/
+      - id: end-of-file-fixer
+        exclude: ^corpus/
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+
+      - id: no-real-configs
+        name: no real device configuration outside corpus/raw
+        entry: bash scripts/hooks/no-real-configs.sh
+        language: system
+        pass_filenames: true
+
+      - id: no-cis-text
+        name: no CIS Benchmark text reproduced in rules or reports
+        entry: bash scripts/hooks/no-cis-text.sh
+        language: system
+        files: ^(rules|docs|backend/crucible/report)/
+
+      - id: airgap
+        name: no cloud inference SDK or external asset host
+        entry: bash scripts/check-airgap.sh
+        language: system
+        pass_filenames: false
