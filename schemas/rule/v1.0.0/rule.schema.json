@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sih26155.crucible/schemas/rule/v1.0.0/rule.schema.json",
+  "title": "Crucible compliance rule",
+  "description": "One compliance control expressed as data. Rules read the IR and nothing else. Adding a framework means adding files, never writing code. DRAFT - freezes 27 Aug 2026.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/rule" },
+
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": ["id", "title", "frameworks", "severity", "assert", "rationale", "remediation"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9._-]{2,63}$",
+          "description": "Stable identifier. Never reused, never renumbered. Appears verbatim in the report and in the ledger."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 160,
+          "description": "One line, imperative, stating the desired state rather than the violation."
+        },
+        "frameworks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Cross-framework control IDENTIFIERS only. CIS Benchmark text must never be reproduced here."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "info"],
+          "description": "Drives Crucible selection: only high and critical findings are verified against a twin."
+        },
+        "assert": {
+          "type": "string",
+          "minLength": 3,
+          "description": "Expression over the IR. Evaluates to true, false or unknown. A null path yields unknown, never false."
+        },
+        "applies_to": {
+          "type": "object",
+          "description": "Guard. A rule that does not apply is reported not_applicable, never as a silent pass.",
+          "additionalProperties": false,
+          "properties": {
+            "vendor":     { "type": "array", "items": { "type": "string" } },
+            "role":       { "type": "array", "items": { "type": "string", "enum": ["core", "distribution", "access", "edge", "firewall", "management"] } },
+            "os_version": { "type": "string" }
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Our own prose, stating a consequence rather than restating the title. Never CIS Benchmark text."
+        },
+        "remediation": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Per-render-target command sequences. Ordered, and safe to paste top to bottom without self-lockout.",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "references": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Public URLs or document identifiers. STIG and NIST text may be quoted; CIS text may not."
+        },
+        "verify": {
+          "type": "object",
+          "description": "Optional Crucible binding. Presence makes the finding eligible for DEMONSTRATED.",
+          "required": ["probe"],
+          "additionalProperties": false,
+          "properties": {
+            "probe":  { "type": "string", "enum": ["telnet_reachable", "weak_ssh_kex", "weak_ssh_cipher", "default_snmp_community", "http_mgmt_exposed", "acl_bypass", "no_session_timeout", "unauthenticated_ntp"] },
+            "params": { "type": "object" }
+          }
+        }
+      }
+    }
+  }
+}
