@@ -1,0 +1,101 @@
+# ---------------------------------------------------------------------------
+# Authentication, credentials and cryptography
+# ---------------------------------------------------------------------------
+
+- id: CIS-NET-5.1.1
+  title: "Centralised AAA must be configured for administrative authentication"
+  frameworks: [CIS-v8, NIST-SP800-53:IA-2, STIG-NET1623]
+  severity: high
+  assert: aaa.enabled == true and not empty(aaa.servers)
+  rationale: >
+    Local-only accounts cannot be revoked centrally. When an administrator
+    leaves, their access persists on every device that was never individually
+    updated, which in practice means most of the fleet.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "aaa new-model"
+      - "tacacs server AAA1"
+      - " address ipv4 10.0.0.20"
+      - "aaa authentication login default group tacacs+ local"
+      - "aaa accounting exec default start-stop group tacacs+"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system tacplus-server 10.0.0.20"
+      - "set system authentication-order [ tacplus password ]"
+      - "commit"
+
+- id: CIS-NET-5.2.1
+  title: "Local credentials must use a modern password hashing algorithm"
+  frameworks: [CIS-v8, NIST-SP800-53:IA-5(1), STIG-NET1636]
+  severity: high
+  assert: all(aaa.local_users, user.hash in [scrypt, pbkdf2, sha512])
+  rationale: >
+    Reversible or fast hashes on a configuration file mean that any copy of a
+    backup is a copy of the administrative credentials. Configuration backups
+    are routinely stored with far weaker controls than the devices themselves.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "username admin algorithm-type scrypt secret NEWPASSWORD"
+      - "no username admin password"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system login user admin authentication encrypted-password NEWHASH"
+      - "commit"
+  # No verify block: hashing algorithm is a static property with no runtime
+  # probe. This finding stays ASSERTED, and the report says so. We never fake
+  # a proof.
+
+- id: CIS-NET-5.3.1
+  title: "Weak SSH key exchange algorithms must not be offered"
+  frameworks: [CIS-v8, NIST-SP800-53:SC-13, STIG-NET1639]
+  severity: high
+  assert: not any(mgmt.ssh.kex, algo in [diffie-hellman-group1-sha1, diffie-hellman-group-exchange-sha1])
+  rationale: >
+    Group 1 key exchange uses a 1024-bit modulus that is within reach of a
+    well-resourced adversary, which is precisely the adversary a critical
+    infrastructure operator is defending against.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "ip ssh dh min size 2048"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system services ssh key-exchange group-exchange-sha2"
+      - "commit"
+    vyos:
+      - "set service ssh key-exchange diffie-hellman-group-exchange-sha256"
+      - "commit"
+      - "save"
+  verify:
+    probe: weak_ssh_kex
+
+- id: CIS-NET-6.1.1
+  title: "Every user-facing interface must apply an inbound access control list"
+  frameworks: [CIS-v8, NIST-SP800-53:SC-7, STIG-NET0740]
+  severity: medium
+  assert: all(interfaces, iface.shutdown == true or iface.is_mgmt == true or defined(iface.acl_in))
+  rationale: >
+    An interface with no inbound filter trusts whatever is plugged into it.
+    This is the condition that converts a compromised endpoint in an access
+    closet into reachability against the management plane.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "interface range GigabitEthernet0/1 - 48"
+      - " ip access-group USER_IN in"
+      - "end"
+      - "write memory"
+    fortios:
+      - "config firewall policy"
+      - " edit 0"
+      - "  set srcintf user"
+      - "  set action accept"
+      - " next"
+      - "end"
+  verify:
+    probe: acl_bypass
