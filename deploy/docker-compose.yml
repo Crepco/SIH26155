@@ -1,0 +1,96 @@
+# ---------------------------------------------------------------------------
+# Crucible - full stack
+#
+# Every service sits on an internal network with no route out. See
+# docs/11-air-gap.md; this file is where that claim is either true or false.
+# ---------------------------------------------------------------------------
+
+name: crucible
+
+services:
+
+  api:
+    build:
+      context: ../backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://crucible:${POSTGRES_PASSWORD}@db:5432/crucible
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_HOST: http://ollama:11434
+      NEO4J_URI: bolt://neo4j:7687
+      CRUCIBLE_OFFLINE: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    depends_on: [db, redis, ollama]
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks: [internal]
+
+  worker:
+    build:
+      context: ../backend
+    command: celery -A crucible.api.tasks worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+psycopg://crucible:${POSTGRES_PASSWORD}@db:5432/crucible
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_HOST: http://ollama:11434
+      CRUCIBLE_OFFLINE: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    depends_on: [db, redis, ollama]
+    networks: [internal]
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: crucible
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: crucible
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    networks: [internal]
+
+  ollama:
+    # Built from a base image with the quantised model already pulled in.
+    # A runtime pull would defeat the entire deployment story.
+    build:
+      context: ./ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    networks: [internal]
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+    volumes:
+      - neo4j-data:/data
+    networks: [internal]
+    profiles: [graph]
+
+  frontend:
+    build:
+      context: ../frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on: [api]
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+    internal: false
+    # NOTE: set `internal: true` for a true air-gapped deployment. It is false
+    # here only so that a development machine can build images. The offline
+    # bundle ships images pre-built and flips this to true, and the egress test
+    # in CI runs with it true.
+
+volumes:
+  db-data:
+  ollama-models:
+  neo4j-data:
