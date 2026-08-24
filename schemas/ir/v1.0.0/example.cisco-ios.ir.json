@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "device": {
+    "vendor": "cisco",
+    "os": "IOS",
+    "version": "15.2(4)E10",
+    "model": "WS-C2960X-48FPD-L",
+    "serial": "FDO1234ABCD",
+    "hostname": "core-sw-01",
+    "fingerprint_confidence": 1.0
+  },
+  "mgmt": {
+    "telnet_enabled": false,
+    "http_enabled": false,
+    "https_enabled": true,
+    "idle_timeout_min": 10,
+    "login_banner": true,
+    "mgmt_acl": "BLOCK_MGMT",
+    "ssh": {
+      "enabled": true,
+      "version": 2,
+      "ciphers": ["aes256-ctr", "aes192-ctr"],
+      "kex": ["diffie-hellman-group14-sha1"],
+      "macs": ["hmac-sha1"],
+      "max_attempts": 3
+    }
+  },
+  "aaa": {
+    "enabled": true,
+    "servers": ["10.0.0.20"],
+    "accounting": true,
+    "local_users": [
+      { "name": "admin", "privilege": 15, "hash": "scrypt", "hash_fingerprint": "c9f0a1..." }
+    ],
+    "password_policy": { "min_length": 12, "complexity": true, "max_age_days": 90 }
+  },
+  "snmp": { "version": 3, "communities": [], "acl": "SNMP_RO", "traps": ["10.0.0.5"] },
+  "logging": { "servers": ["10.0.0.5"], "level": "informational", "timestamps": true, "buffered": true },
+  "ntp": { "servers": ["10.0.0.1"], "authenticated": true, "source": "Vlan900" },
+  "interfaces": [
+    { "name": "GigabitEthernet0/1", "description": "uplink-to-edge", "addresses": [], "acl_in": "BLOCK_MGMT", "acl_out": null, "zone": null, "vlan": 10, "shutdown": false, "is_mgmt": false },
+    { "name": "Vlan900", "description": "management", "addresses": ["10.0.0.11/24"], "acl_in": "MGMT_IN", "acl_out": null, "zone": null, "vlan": 900, "shutdown": false, "is_mgmt": true }
+  ],
+  "acls": [
+    {
+      "name": "MGMT_IN",
+      "entries": [
+        { "seq": 10, "action": "permit", "protocol": "tcp", "src": "10.0.0.0/24", "dst": "any", "src_port": null, "dst_port": "22", "log": true, "raw": "permit tcp 10.0.0.0 0.0.0.255 any eq 22 log" },
+        { "seq": 20, "action": "deny",   "protocol": "ip",  "src": "any",         "dst": "any", "src_port": null, "dst_port": null, "log": true, "raw": "deny ip any any log" }
+      ]
+    }
+  ],
+  "routing":  { "protocols": ["ospf"], "neighbour_authentication": true },
+  "services": { "discovery_protocols": false, "source_routing": false, "proxy_arp": false, "unused": [] },
+  "crypto":   { "tls_versions": ["TLSv1.2"], "ike_proposals": [] },
+
+  "coverage": {
+    "total_lines": 13102,
+    "parsed_lines": 12847,
+    "unparsed_lines": 255,
+    "unparsed_sample": [
+      { "file": "core-sw-01/running-config.txt", "line": 9021, "raw": "  service-policy input CUSTOM_QOS_MAP" }
+    ],
+    "by_tier": { "tier0": 12310, "tier1": 402, "tier2": 121, "tier3": 14 }
+  },
+
+  "provenance": {
+    "mgmt.idle_timeout_min": {
+      "file": "core-sw-01/running-config.txt",
+      "line": 4412,
+      "raw": " exec-timeout 10 0",
+      "tier": 0,
+      "adapter_pack": null,
+      "confidence": 1.0
+    },
+    "mgmt.telnet_enabled": {
+      "file": "core-sw-01/running-config.txt",
+      "line": 4410,
+      "raw": " transport input ssh",
+      "tier": 0,
+      "adapter_pack": null,
+      "confidence": 1.0
+    },
+    "device.serial": {
+      "file": "core-sw-01/show-version.txt",
+      "line": 27,
+      "raw": "System serial number            : FDO1234ABCD",
+      "tier": 0,
+      "adapter_pack": null,
+      "confidence": 1.0
+    }
+  }
+}
