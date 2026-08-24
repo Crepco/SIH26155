@@ -1,0 +1,163 @@
+# ---------------------------------------------------------------------------
+# Management plane hardening
+# Seed rules written by hand to prove the format survives contact with reality.
+# ---------------------------------------------------------------------------
+
+- id: CIS-NET-1.1.1
+  title: "Telnet must be disabled on all management transports"
+  frameworks: [CIS-v8, NIST-SP800-53:AC-17, STIG-NET0700]
+  severity: critical
+  assert: mgmt.telnet_enabled == false
+  rationale: >
+    Telnet carries credentials and session content in cleartext. Anyone with
+    access to a transit segment recovers administrative credentials passively,
+    with no exploit and no trace in the device log.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "no ip telnet server"
+      - "line vty 0 15"
+      - " transport input ssh"
+      - "end"
+      - "write memory"
+    juniper:
+      - "delete system services telnet"
+      - "commit"
+    fortios:
+      - "config system global"
+      - " set admin-telnet disable"
+      - "end"
+    routeros:
+      - "/ip service set telnet disabled=yes"
+    vyos:
+      - "delete service telnet"
+      - "commit"
+      - "save"
+  references:
+    - "NIST SP 800-53 Rev 5 AC-17(2)"
+  verify:
+    probe: telnet_reachable
+
+- id: CIS-NET-1.1.2
+  title: "SSH must be enabled and restricted to protocol version 2"
+  frameworks: [CIS-v8, NIST-SP800-53:AC-17, STIG-NET1638]
+  severity: high
+  assert: mgmt.ssh.enabled == true and mgmt.ssh.version == 2
+  rationale: >
+    SSH version 1 has known integrity and key-exchange weaknesses that permit
+    session tampering. Leaving version 1 negotiable means an attacker chooses
+    the weaker protocol on the administrator behalf.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "ip ssh version 2"
+      - "line vty 0 15"
+      - " transport input ssh"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system services ssh protocol-version v2"
+      - "commit"
+    fortios:
+      - "config system global"
+      - " set admin-ssh-v1 disable"
+      - "end"
+    vyos:
+      - "set service ssh"
+      - "commit"
+      - "save"
+
+- id: CIS-NET-1.2.4
+  title: "Idle session timeout must be 10 minutes or less"
+  frameworks: [CIS-v8, NIST-SP800-53:AC-11, STIG-NET0993]
+  severity: medium
+  assert: mgmt.idle_timeout_min <= 10
+  rationale: >
+    Unattended sessions permit hijacking of privileged access. An unlocked
+    console or a forgotten SSH window is indistinguishable from an authorised
+    administrator for as long as the session survives.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "line vty 0 15"
+      - " exec-timeout 10 0"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system login idle-timeout 10"
+      - "commit"
+    fortios:
+      - "config system global"
+      - " set admintimeout 10"
+      - "end"
+    vyos:
+      - "set system login timeout 600"
+      - "commit"
+      - "save"
+  verify:
+    probe: no_session_timeout
+    params:
+      idle_seconds: 660
+
+- id: CIS-NET-1.3.1
+  title: "Plaintext HTTP management interface must be disabled"
+  frameworks: [CIS-v8, NIST-SP800-53:SC-8, STIG-NET1660]
+  severity: high
+  assert: mgmt.http_enabled == false
+  rationale: >
+    An HTTP management plane exposes session cookies and credentials to any
+    observer on the path, and is routinely the first service an internal
+    scanner finds on a device that is otherwise well hardened.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "no ip http server"
+      - "ip http secure-server"
+      - "end"
+      - "write memory"
+    juniper:
+      - "delete system services web-management http"
+      - "set system services web-management https system-generated-certificate"
+      - "commit"
+    fortios:
+      - "config system global"
+      - " set admin-sport 443"
+      - " set admin-https-redirect enable"
+      - "end"
+    routeros:
+      - "/ip service set www disabled=yes"
+      - "/ip service set www-ssl disabled=no"
+  verify:
+    probe: http_mgmt_exposed
+
+- id: CIS-NET-1.4.1
+  title: "Management plane access must be restricted by an access control list"
+  frameworks: [CIS-v8, NIST-SP800-53:AC-3, STIG-NET1637]
+  severity: critical
+  assert: defined(mgmt.mgmt_acl)
+  rationale: >
+    Without a management ACL, every host that can route to the device can reach
+    its administrative services. This is the single condition that turns one
+    compromised workstation into fleet-wide administrative access.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "ip access-list standard MGMT_HOSTS"
+      - " permit 10.0.0.0 0.0.0.255"
+      - " deny any log"
+      - "line vty 0 15"
+      - " access-class MGMT_HOSTS in"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set firewall family inet filter MGMT_HOSTS term allow from source-address 10.0.0.0/24"
+      - "set system services ssh connection-limit 10"
+      - "commit"
+    fortios:
+      - "config system interface"
+      - " edit mgmt"
+      - "  set trusthost1 10.0.0.0 255.255.255.0"
+      - " next"
+      - "end"
+  verify:
+    probe: acl_bypass
