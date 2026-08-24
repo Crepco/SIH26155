@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------------------
+# Ownership is exclusive: one track is accountable per area.
+#
+# Replace the placeholders with GitHub handles once the team is on the repo.
+# The two frozen contracts - the IR schema and the rule format - deliberately
+# require review from more than one track, because everything depends on them.
+# ---------------------------------------------------------------------------
+
+# Default
+*                               @Crepco
+
+# --- frozen contracts: two-track review ------------------------------------
+/schemas/ir/                    @Crepco
+/schemas/rule/                  @Crepco
+/docs/03-ir-schema.md           @Crepco
+/docs/04-rule-format.md         @Crepco
+
+# --- Track A: parsing and normalisation ------------------------------------
+/backend/crucible/ingest/       @Crepco
+/backend/crucible/fingerprint/  @Crepco
+/backend/crucible/parsers/      @Crepco
+/backend/crucible/ir/           @Crepco
+/corpus/                        @Crepco
+
+# --- Track B: compliance engine and fleet graph ----------------------------
+/backend/crucible/policy/       @Crepco
+/backend/crucible/graph/        @Crepco
+/rules/                         @Crepco
+
+# --- Track C: AI and training loop -----------------------------------------
+/backend/crucible/training/     @Crepco
+/schemas/adapter/               @Crepco
+/adapters/                      @Crepco
+
+# --- Track D: frontend -----------------------------------------------------
+/frontend/                      @Crepco
+
+# --- Track E: reporting and ledger -----------------------------------------
+/backend/crucible/report/       @Crepco
+/backend/crucible/ledger/       @Crepco
+
+# --- Track F: Crucible and infrastructure ----------------------------------
+/backend/crucible/sandbox/      @Crepco
+/labs/                          @Crepco
+/deploy/                        @Crepco
+/.github/                       @Crepco
