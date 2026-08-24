@@ -1,0 +1,82 @@
+# ---------------------------------------------------------------------------
+# Example Vendor Adapter Pack - MikroTik RouterOS 7
+#
+# This is the artefact produced by the Phase 2 definition of done: MikroTik is
+# held out of the build entirely, fed in cold, trained live in the GUI in under
+# three minutes, and exported as this file.
+#
+# Spec: docs/06-adapter-packs.md
+# ---------------------------------------------------------------------------
+
+schema_version: "1.0.0"
+
+pack:
+  id: mikrotik-routeros-7
+  vendor: mikrotik
+  os: RouterOS
+  os_versions: ">=7.0"
+  ir_version: "1.0.0"
+  created: 2026-09-11
+  author: "audit team, org-042"
+  description: >
+    Flat, path-prefixed command grammar. Learned from four configurations at
+    Tier 3 with two mappings proposed at Tier 2 and confirmed by an operator.
+
+grammar:
+  kind: flat_path_prefixed
+  comment_prefix: "#"
+  path_token: "/"
+  continuation: none
+
+fingerprint:
+  - match: "/system identity set name="
+    confidence: 0.9
+  - match: "/interface bridge add"
+    confidence: 0.6
+
+mappings:
+  - ir_path: mgmt.telnet_enabled
+    match: "/ip service set telnet disabled=(?P<value>yes|no)"
+    transform: invert_yes_no
+    tier_learned: 3
+    confirmed_by: "admin@org-042"
+    samples: 4
+
+  - ir_path: mgmt.ssh.enabled
+    match: "/ip service set ssh disabled=(?P<value>yes|no)"
+    transform: invert_yes_no
+    tier_learned: 3
+    confirmed_by: "admin@org-042"
+    samples: 4
+
+  - ir_path: mgmt.http_enabled
+    match: "/ip service set www disabled=(?P<value>yes|no)"
+    transform: invert_yes_no
+    tier_learned: 2
+    confidence: 0.88
+    samples: 2
+
+  - ir_path: snmp.communities
+    match: "/snmp community add name=(?P<value>[A-Za-z0-9_-]+)"
+    transform: collect_redacted
+    tier_learned: 2
+    confidence: 0.81
+    samples: 3
+
+  - ir_path: ntp.servers
+    match: "/system ntp client servers add address=(?P<value>[0-9.]+)"
+    transform: collect
+    tier_learned: 3
+    confirmed_by: "admin@org-042"
+    samples: 2
+
+# Named transforms only. There is no expression language here by design:
+# a pack is data, and a pack that could compute could also lie in a way a
+# reviewer cannot see.
+# Available: identity, invert_yes_no, to_int, to_bool, minutes_from_seconds,
+#            collect, collect_redacted, presence
+
+signature:
+  algorithm: ed25519
+  key_id: "org-042-audit"
+  value: "REPLACED-AT-EXPORT"
