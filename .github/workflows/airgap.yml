@@ -1,0 +1,61 @@
+name: Air-gap
+
+# The claim we make on stage, tested on every push rather than remembered.
+#
+# The failure this guards against is not somebody deliberately calling a cloud
+# API. It is a dependency quietly fetching a model, a font or a template on
+# first use - which shows up for the first time in front of an audience.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  forbidden-dependencies:
+    name: No cloud inference SDKs anywhere in the tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail on cloud LLM SDKs in Python dependencies
+        run: |
+          if grep -rniE "(^|[^a-z])(openai|anthropic|google-generativeai|cohere|mistralai|replicate|together)([^a-z]|$)" \
+               backend/pyproject.toml backend/requirements*.txt 2>/dev/null; then
+            echo "::error::A cloud inference SDK appears in the dependency tree. See ADR 0003."
+            exit 1
+          fi
+          echo "clean"
+
+      - name: Fail on cloud LLM SDKs in Node dependencies
+        run: |
+          if grep -rniE "\"(openai|@anthropic-ai/[a-z-]+|@google/generative-ai)\"" frontend/package.json 2>/dev/null; then
+            echo "::error::A cloud inference SDK appears in the frontend dependency tree. See ADR 0003."
+            exit 1
+          fi
+          echo "clean"
+
+      - name: Fail on external asset hosts referenced in source
+        run: |
+          if grep -rniE "(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)" \
+               frontend backend --include="*.ts" --include="*.tsx" --include="*.js" --include="*.css" --include="*.html" --include="*.py" 2>/dev/null; then
+            echo "::error::An external asset host is referenced. Bundle it instead. See docs/11-air-gap.md."
+            exit 1
+          fi
+          echo "clean"
+
+  egress-blocked-pipeline:
+    name: Full audit with no route off the host
+    runs-on: ubuntu-latest
+    # Enabled from Phase 1, when there is a pipeline to run. Until then the
+    # forbidden-dependencies job carries the guarantee.
+    if: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the pipeline with loopback only
+        run: |
+          echo "Runs ingest -> parse -> evaluate -> report -> sign with no DNS"
+          echo "and no outbound route. Any resolution attempt fails the job."
