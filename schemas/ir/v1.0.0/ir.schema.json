@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sih26155.crucible/schemas/ir/v1.0.0/ir.schema.json",
+  "title": "Crucible normalised security baseline model",
+  "description": "Vendor-neutral intermediate representation of the security posture of a network device. Parsers write into it; rules, reports, remediation, fleet analysis and the verification sandbox read only from it. DRAFT - freezes 27 Aug 2026.",
+  "type": "object",
+  "required": ["schema_version", "device", "coverage"],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+
+    "device": {
+      "type": "object",
+      "description": "Identity. Serial and hardware usually come from show version output, not the running configuration.",
+      "required": ["vendor"],
+      "properties": {
+        "vendor":        { "type": "string", "examples": ["cisco", "juniper", "fortinet", "arista", "paloalto", "mikrotik"] },
+        "os":            { "type": ["string", "null"], "examples": ["IOS", "JUNOS", "FortiOS", "EOS", "PAN-OS", "RouterOS"] },
+        "version":       { "type": ["string", "null"] },
+        "model":         { "type": ["string", "null"] },
+        "serial":        { "type": ["string", "null"] },
+        "hostname":      { "type": ["string", "null"] },
+        "fingerprint_confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+
+    "mgmt": {
+      "type": "object",
+      "description": "Management plane. Absence is null, never false: null means never observed.",
+      "properties": {
+        "telnet_enabled":   { "type": ["boolean", "null"] },
+        "http_enabled":     { "type": ["boolean", "null"] },
+        "https_enabled":    { "type": ["boolean", "null"] },
+        "idle_timeout_min": { "type": ["integer", "null"], "minimum": 0 },
+        "login_banner":     { "type": ["boolean", "null"] },
+        "mgmt_acl":         { "type": ["string", "null"] },
+        "ssh": {
+          "type": "object",
+          "properties": {
+            "enabled":      { "type": ["boolean", "null"] },
+            "version":      { "type": ["integer", "null"], "enum": [1, 2, null] },
+            "ciphers":      { "type": "array", "items": { "type": "string" } },
+            "kex":          { "type": "array", "items": { "type": "string" } },
+            "macs":         { "type": "array", "items": { "type": "string" } },
+            "max_attempts": { "type": ["integer", "null"] }
+          }
+        }
+      }
+    },
+
+    "aaa": {
+      "type": "object",
+      "properties": {
+        "enabled":       { "type": ["boolean", "null"] },
+        "servers":       { "type": "array", "items": { "type": "string" } },
+        "accounting":    { "type": ["boolean", "null"] },
+        "local_users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name":      { "type": "string" },
+              "privilege": { "type": ["integer", "null"] },
+              "hash":      { "type": ["string", "null"], "description": "Hash ALGORITHM name only. The digest itself is redacted at parse time and never stored." },
+              "hash_fingerprint": { "type": ["string", "null"], "description": "Salted, deployment-local digest used only for credential-reuse correlation across the fleet." }
+            }
+          }
+        },
+        "password_policy": {
+          "type": "object",
+          "properties": {
+            "min_length":   { "type": ["integer", "null"] },
+            "complexity":   { "type": ["boolean", "null"] },
+            "max_age_days": { "type": ["integer", "null"] }
+          }
+        }
+      }
+    },
+
+    "snmp": {
+      "type": "object",
+      "properties": {
+        "version":     { "type": ["integer", "null"], "enum": [1, 2, 3, null] },
+        "communities": { "type": "array", "items": { "type": "string" }, "description": "Community strings are redacted to a stable token before storage. Default-community detection happens at parse time, not from stored text." },
+        "acl":         { "type": ["string", "null"] },
+        "traps":       { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "logging": {
+      "type": "object",
+      "properties": {
+        "servers":    { "type": "array", "items": { "type": "string" } },
+        "level":      { "type": ["string", "null"] },
+        "timestamps": { "type": ["boolean", "null"] },
+        "buffered":   { "type": ["boolean", "null"] }
+      }
+    },
+
+    "ntp": {
+      "type": "object",
+      "properties": {
+        "servers":       { "type": "array", "items": { "type": "string" } },
+        "authenticated": { "type": ["boolean", "null"] },
+        "source":        { "type": ["string", "null"] }
+      }
+    },
+
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name":        { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "addresses":   { "type": "array", "items": { "type": "string" } },
+          "acl_in":      { "type": ["string", "null"] },
+          "acl_out":     { "type": ["string", "null"] },
+          "zone":        { "type": ["string", "null"] },
+          "vlan":        { "type": ["integer", "null"] },
+          "shutdown":    { "type": ["boolean", "null"] },
+          "is_mgmt":     { "type": ["boolean", "null"] }
+        }
+      }
+    },
+
+    "acls": {
+      "type": "array",
+      "description": "Ordered entries. Order is load-bearing: shadowed-ACE detection depends on it.",
+      "items": {
+        "type": "object",
+        "required": ["name", "entries"],
+        "properties": {
+          "name": { "type": "string" },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "seq":       { "type": "integer" },
+                "action":    { "type": "string", "enum": ["permit", "deny"] },
+                "protocol":  { "type": ["string", "null"] },
+                "src":       { "type": ["string", "null"] },
+                "dst":       { "type": ["string", "null"] },
+                "src_port":  { "type": ["string", "null"] },
+                "dst_port":  { "type": ["string", "null"] },
+                "log":       { "type": ["boolean", "null"] },
+                "raw":       { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "routing": {
+      "type": "object",
+      "properties": {
+        "protocols": { "type": "array", "items": { "type": "string" } },
+        "neighbour_authentication": { "type": ["boolean", "null"] }
+      }
+    },
+
+    "services": {
+      "type": "object",
+      "properties": {
+        "discovery_protocols": { "type": ["boolean", "null"], "description": "CDP, LLDP and equivalents enabled on user-facing ports." },
+        "source_routing":      { "type": ["boolean", "null"] },
+        "proxy_arp":           { "type": ["boolean", "null"] },
+        "unused":              { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "crypto": {
+      "type": "object",
+      "properties": {
+        "tls_versions":  { "type": "array", "items": { "type": "string" } },
+        "ike_proposals": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "coverage": {
+      "type": "object",
+      "description": "Invariants 3 and 4. parsed_lines + unparsed_lines MUST equal total_lines.",
+      "required": ["total_lines", "parsed_lines", "unparsed_lines"],
+      "properties": {
+        "total_lines":     { "type": "integer", "minimum": 0 },
+        "parsed_lines":    { "type": "integer", "minimum": 0 },
+        "unparsed_lines":  { "type": "integer", "minimum": 0 },
+        "unparsed_sample": { "type": "array", "items": { "type": "object" } },
+        "by_tier": {
+          "type": "object",
+          "properties": {
+            "tier0": { "type": "integer" },
+            "tier1": { "type": "integer" },
+            "tier2": { "type": "integer" },
+            "tier3": { "type": "integer" }
+          }
+        }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "description": "Invariant 2. Keyed by IR dotted path. A fact without provenance may not appear in a finding.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["file", "line", "tier"],
+        "properties": {
+          "file":         { "type": "string" },
+          "line":         { "type": "integer", "minimum": 1 },
+          "raw":          { "type": "string" },
+          "tier":         { "type": "integer", "enum": [0, 1, 2, 3] },
+          "adapter_pack": { "type": ["string", "null"] },
+          "confidence":   { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    }
+  }
+}
