@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  contracts:
+    name: Validate schemas and rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validators
+        run: pip install jsonschema pyyaml check-jsonschema
+
+      - name: IR schema is valid JSON Schema
+        run: check-jsonschema --check-metaschema schemas/ir/v1.0.0/ir.schema.json
+
+      - name: Rule schema is valid JSON Schema
+        run: check-jsonschema --check-metaschema schemas/rule/v1.0.0/rule.schema.json
+
+      - name: Worked IR example validates against the IR schema
+        run: check-jsonschema --schemafile schemas/ir/v1.0.0/ir.schema.json schemas/ir/v1.0.0/example.cisco-ios.ir.json
+
+      - name: Every rule file validates against the rule schema
+        run: check-jsonschema --schemafile schemas/rule/v1.0.0/rule.schema.json rules/cis/*.yaml
+
+  lint:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        working-directory: backend
+        run: pip install -e ".[dev]"
+
+      - name: Ruff
+        working-directory: backend
+        run: ruff check .
+
+      - name: Ruff format check
+        working-directory: backend
+        run: ruff format --check .
+
+      - name: Mypy
+        working-directory: backend
+        run: mypy crucible
+
+      - name: Import contracts (ADR 0001 - nothing downstream of the IR reaches upstream)
+        working-directory: backend
+        run: lint-imports
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        working-directory: backend
+        run: pip install -e ".[dev]"
+
+      - name: Pytest
+        working-directory: backend
+        run: pytest -m "not sandbox and not model" --cov=crucible --cov-report=term-missing
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: No external asset references in build output
+        working-directory: frontend
+        run: npm run check:offline
