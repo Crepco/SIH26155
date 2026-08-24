@@ -1,0 +1,60 @@
+name: Track task
+description: A unit of work owned by one track
+title: "[Track X] "
+labels: ["task"]
+body:
+  - type: dropdown
+    id: track
+    attributes:
+      label: Track
+      description: Ownership is exclusive. One person is accountable.
+      options:
+        - "A - Parsing & Normalisation"
+        - "B - Compliance Engine"
+        - "C - AI & Training Loop"
+        - "D - Frontend & Dashboard"
+        - "E - Reporting & Ledger"
+        - "F - Crucible & Infrastructure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - "0 - Foundations (25-31 Aug)"
+        - "1 - Core pipeline (1-7 Sep)"
+        - "2 - AI layer (8-14 Sep)"
+        - "3 - Differentiators (15-19 Sep)"
+        - "4 - Crucible (21 Sep onward)"
+        - "5 - Hardening"
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What is true when this is done, stated as an observable fact rather than an activity.
+      placeholder: "Uploading a real Cisco config produces a line-cited PDF."
+    validations:
+      required: true
+
+  - type: textarea
+    id: blocks
+    attributes:
+      label: Blocks / blocked by
+      description: Name the issue numbers. Silent blocking is the most expensive failure mode on a three-week build.
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Invariants this work must not break
+      options:
+        - label: "1 - The AI never decides pass or fail"
+        - label: "2 - Every finding carries line-level evidence"
+        - label: "3 - Fail closed: unparsed input can never produce a pass"
+        - label: "4 - Coverage is published, not hidden"
+        - label: "5 - Three finding states, never two"
+        - label: "Air-gap: no outbound network call in any code path"
