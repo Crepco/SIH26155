@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sih26155.crucible/schemas/adapter/v1.0.0/adapter.schema.json",
+  "title": "Crucible Vendor Adapter Pack",
+  "description": "A signed, portable unit of learned vendor knowledge. Data only: a pack describes a grammar and field mappings, and can never compute. An unsigned or signature-invalid pack is refused at import, not warned about. DRAFT - freezes in Phase 2.",
+  "type": "object",
+  "required": ["schema_version", "pack", "grammar", "mappings", "signature"],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+
+    "pack": {
+      "type": "object",
+      "required": ["id", "vendor", "ir_version", "created"],
+      "properties": {
+        "id":          { "type": "string", "minLength": 3, "maxLength": 64 },
+        "vendor":      { "type": "string" },
+        "os":          { "type": ["string", "null"] },
+        "os_versions": { "type": ["string", "null"] },
+        "ir_version":  { "type": "string", "description": "The IR schema version this pack targets. A pack may only name IR paths that exist in that version." },
+        "created":     { "type": "string", "format": "date" },
+        "author":      { "type": ["string", "null"] },
+        "description": { "type": ["string", "null"] }
+      }
+    },
+
+    "grammar": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind":           { "type": "string", "enum": ["brace_hierarchy", "indent_blocks", "marker_blocks", "flat_path_prefixed", "xml", "json"] },
+        "comment_prefix": { "type": ["string", "null"] },
+        "path_token":     { "type": ["string", "null"] },
+        "block_open":     { "type": ["string", "null"] },
+        "block_close":    { "type": ["string", "null"] },
+        "continuation":   { "type": ["string", "null"] }
+      }
+    },
+
+    "fingerprint": {
+      "type": "array",
+      "description": "Signatures that identify this vendor from an unknown file. Never sufficient on its own: fingerprint confidence is recorded on the device, not asserted.",
+      "items": {
+        "type": "object",
+        "required": ["match"],
+        "properties": {
+          "match":      { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+
+    "mappings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["ir_path", "match", "transform", "tier_learned"],
+        "additionalProperties": false,
+        "properties": {
+          "ir_path":   { "type": "string", "description": "Dotted IR path. Must exist in the IR version this pack declares." },
+          "match":     { "type": "string", "description": "Match expression over configuration text. Data, not code." },
+          "transform": {
+            "type": "string",
+            "description": "Named transform from the fixed library. There is deliberately no expression language: a pack that could compute could also lie in a way a reviewer cannot see.",
+            "enum": ["identity", "invert_yes_no", "to_int", "to_bool", "minutes_from_seconds", "collect", "collect_redacted", "presence"]
+          },
+          "tier_learned": { "type": "integer", "enum": [2, 3] },
+          "confidence":   { "type": "number", "minimum": 0, "maximum": 1 },
+          "confirmed_by": { "type": ["string", "null"], "description": "Set when a human confirmed the mapping at Tier 3." },
+          "samples":      { "type": "integer", "minimum": 0, "description": "Count only. Sample TEXT is stripped at export: a pack carries knowledge of a grammar, never fragments of a customer configuration." }
+        }
+      }
+    },
+
+    "signature": {
+      "type": "object",
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": { "type": "string", "const": "ed25519" },
+        "key_id":    { "type": "string" },
+        "value":     { "type": "string", "description": "Base64. Covers the canonical serialisation of every field except this one." }
+      }
+    }
+  }
+}
