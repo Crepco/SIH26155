@@ -1,2 +1,14 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Device configurations are evidence: line numbers are cited in audit reports,
+# so these files must never be normalised, merged or diffed as ordinary text.
+corpus/**        -text -diff merge=binary
+*.pcap           binary
+*.gguf           binary
+*.safetensors    binary
+
+# Generated / vendored paths excluded from language statistics
+docs/**          linguist-documentation
+corpus/**        linguist-vendored
+rules/**         linguist-detectable
