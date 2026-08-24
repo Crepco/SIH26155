@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Corpus generation topology
+#
+# Five vendors on one laptop. Boot, configure badly on purpose, export the
+# running configurations into corpus/raw/.
+#
+#   containerlab deploy -t labs/corpus/multivendor.clab.yml
+#   containerlab destroy -t labs/corpus/multivendor.clab.yml --cleanup
+#
+# Images must be pre-pulled. A lab that fetches on demand does not run on the
+# demo machine with the cable out. See docs/11-air-gap.md.
+# ---------------------------------------------------------------------------
+
+name: crucible-corpus
+
+topology:
+  nodes:
+    core-sw-01:
+      kind: arista_ceos
+      image: ceos:4.32.0F
+      startup-config: configs/arista-core.cfg
+
+    edge-rtr-01:
+      kind: linux
+      image: frrouting/frr:latest
+      binds:
+        - configs/frr-edge:/etc/frr
+
+    leaf-01:
+      kind: sonic-vs
+      image: docker-sonic-vs:latest
+
+    fw-01:
+      kind: vr-vyos
+      image: vyos/vyos:1.4
+
+    sr-01:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
+
+  links:
+    - endpoints: ["core-sw-01:eth1", "edge-rtr-01:eth1"]
+    - endpoints: ["core-sw-01:eth2", "leaf-01:eth1"]
+    - endpoints: ["core-sw-01:eth3", "fw-01:eth1"]
+    - endpoints: ["edge-rtr-01:eth2", "sr-01:e1-1"]
+
+# ---------------------------------------------------------------------------
+# Deliberate weaknesses introduced by scripts/misconfigure.sh, so that the
+# corpus contains devices worth auditing and the ground-truth labels have
+# something to be right about:
+#
+#   core-sw-01   telnet left enabled, no session timeout
+#   edge-rtr-01  permits any -> any into the management segment
+#   leaf-01      default SNMP community
+#   fw-01        weak SSH key exchange offered
+#   sr-01        unauthenticated NTP, and a shadowed ACL entry
+#
+# The first two together are the fleet-graph demonstration: both devices can
+# pass their own benchmark while the management plane is wide open.
+# ---------------------------------------------------------------------------
