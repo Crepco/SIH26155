@@ -1,0 +1,111 @@
+# ---------------------------------------------------------------------------
+# SNMP, logging and time synchronisation
+# ---------------------------------------------------------------------------
+
+- id: CIS-NET-2.1.1
+  title: "SNMP must run version 3 with authentication and privacy"
+  frameworks: [CIS-v8, NIST-SP800-53:IA-3, STIG-NET0894]
+  severity: high
+  assert: snmp.version == 3
+  rationale: >
+    SNMP v1 and v2c authenticate with a community string sent in cleartext.
+    A read-only community discloses the full device configuration; a read-write
+    community is remote administrative control.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "no snmp-server community public"
+      - "no snmp-server community private"
+      - "snmp-server group SECURE v3 priv"
+      - "snmp-server user monitor SECURE v3 auth sha AUTHPASS priv aes 128 PRIVPASS"
+      - "end"
+      - "write memory"
+    juniper:
+      - "delete snmp community public"
+      - "set snmp v3 usm local-engine user monitor authentication-sha"
+      - "commit"
+    fortios:
+      - "config system snmp sysinfo"
+      - " set status enable"
+      - "end"
+      - "config system snmp user"
+      - " edit monitor"
+      - "  set security-level auth-priv"
+      - " next"
+      - "end"
+  verify:
+    probe: default_snmp_community
+
+- id: CIS-NET-2.1.2
+  title: "No default or well-known SNMP community strings may be configured"
+  frameworks: [CIS-v8, NIST-SP800-53:IA-5, STIG-NET0893]
+  severity: critical
+  assert: empty(snmp.communities)
+  rationale: >
+    Default communities such as public and private are the first thing any
+    scanner tries. A single surviving default community on one device in the
+    fleet discloses topology, interfaces and ACL names to an unauthenticated
+    attacker.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "no snmp-server community public"
+      - "no snmp-server community private"
+      - "end"
+      - "write memory"
+    routeros:
+      - "/snmp community remove [find name=public]"
+  verify:
+    probe: default_snmp_community
+
+- id: CIS-NET-3.1.1
+  title: "Device must forward logs to at least one central syslog server"
+  frameworks: [CIS-v8, NIST-SP800-53:AU-4, STIG-NET1021]
+  severity: medium
+  assert: defined(logging.servers) and not empty(logging.servers)
+  rationale: >
+    Local buffered logging is lost on reboot and is the first thing an attacker
+    clears. Without central collection there is no record that survives the
+    compromise of the device that produced it.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "logging host 10.0.0.5"
+      - "logging trap informational"
+      - "service timestamps log datetime msec localtime show-timezone"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system syslog host 10.0.0.5 any info"
+      - "commit"
+    fortios:
+      - "config log syslogd setting"
+      - " set status enable"
+      - " set server 10.0.0.5"
+      - "end"
+
+- id: CIS-NET-4.1.1
+  title: "Time synchronisation must use authenticated NTP"
+  frameworks: [CIS-v8, NIST-SP800-53:AU-8, STIG-NET0813]
+  severity: medium
+  assert: ntp.authenticated == true
+  rationale: >
+    Unauthenticated NTP lets an on-path attacker move device clocks. Skewed
+    clocks make cross-device log correlation worthless and can silently expire
+    or un-expire certificates across the fleet.
+  remediation:
+    cisco_ios:
+      - "configure terminal"
+      - "ntp authenticate"
+      - "ntp authentication-key 1 md5 NTPKEY"
+      - "ntp trusted-key 1"
+      - "ntp server 10.0.0.1 key 1"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system ntp authentication-key 1 type md5 value NTPKEY"
+      - "set system ntp trusted-key 1"
+      - "set system ntp server 10.0.0.1 key 1"
+      - "commit"
+  verify:
+    probe: unauthenticated_ntp
