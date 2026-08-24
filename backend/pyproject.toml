@@ -1,0 +1,154 @@
+# ---------------------------------------------------------------------------
+# Crucible backend
+#
+# Constraint that governs every dependency below: it must be vendorable into an
+# offline installation bundle. If it cannot be vendored, it cannot be a
+# dependency. See docs/11-air-gap.md.
+# ---------------------------------------------------------------------------
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crucible"
+version = "0.1.0"
+description = "AI-driven multi-vendor network security compliance auditor with air-gapped verification sandbox"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "../LICENSE" }
+keywords = ["compliance", "network-security", "cis", "stig", "nist", "audit", "air-gapped"]
+
+dependencies = [
+  # --- web and data ------------------------------------------------------
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "sqlalchemy>=2.0",
+  "psycopg[binary]>=3.2",
+  "alembic>=1.14",
+
+  # --- jobs --------------------------------------------------------------
+  "celery>=5.4",
+  "redis>=5.2",
+
+  # --- parsing, Tier 0 ---------------------------------------------------
+  "ciscoconfparse2>=0.7",
+  "textfsm>=1.1",
+  "ntc-templates>=6.0",
+  "lxml>=5.3",
+
+  # --- rules and schemas -------------------------------------------------
+  "pyyaml>=6.0",
+  "jsonschema>=4.23",
+
+  # --- integrity ---------------------------------------------------------
+  "cryptography>=44.0",
+
+  # --- reporting ---------------------------------------------------------
+  "reportlab>=4.2",
+
+  # --- graph -------------------------------------------------------------
+  "networkx>=3.4",
+  "neo4j>=5.26",
+]
+
+[project.optional-dependencies]
+# Tiers 1-3. Separated so the deterministic pipeline can be installed and
+# tested without pulling model machinery - which is also how we prove that the
+# verdict path contains no model.
+ai = [
+  "sentence-transformers>=3.3",
+  "chromadb>=0.5",
+  "httpx>=0.28",        # local Ollama on loopback only; egress is blocked in CI
+]
+
+# Optional live device pull. Stretch goal, deployment story, never the demo.
+live = [
+  "netmiko>=4.4",
+  "napalm>=5.0",
+]
+
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "import-linter>=2.1",
+  "types-pyyaml",
+]
+
+[project.scripts]
+crucible = "crucible.api.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["crucible*"]
+
+# ---------------------------------------------------------------------------
+# Lint and types
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "S", "A", "C4", "PTH", "RUF"]
+ignore = ["S101"]  # assert is fine in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "N"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "integration: runs the full pipeline against corpus files",
+  "sandbox: requires Docker and containerlab",
+  "model: requires a local Ollama instance",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["crucible"]
+
+# ---------------------------------------------------------------------------
+# Architecture enforcement - ADR 0001
+#
+# Nothing downstream of the IR may import anything upstream of it. This is the
+# rule that keeps the IR a real pivot rather than an aspiration.
+# ---------------------------------------------------------------------------
+
+[tool.importlinter]
+root_package = "crucible"
+
+[[tool.importlinter.contracts]]
+name = "Downstream of the IR never touches raw parsing"
+type = "forbidden"
+source_modules = [
+  "crucible.policy",
+  "crucible.graph",
+  "crucible.report",
+  "crucible.sandbox",
+]
+forbidden_modules = [
+  "crucible.ingest",
+  "crucible.parsers",
+  "crucible.fingerprint",
+]
+
+[[tool.importlinter.contracts]]
+name = "The deterministic pipeline never imports the model layer"
+type = "forbidden"
+source_modules = [
+  "crucible.parsers",
+  "crucible.policy",
+  "crucible.ir",
+]
+forbidden_modules = ["crucible.training"]
