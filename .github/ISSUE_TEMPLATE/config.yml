@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read the specs first
+    url: https://github.com/Crepco/SIH26155/tree/main/docs
+    about: The IR schema, rule format and adapter pack format are frozen contracts. Check them before filing.
+  - name: Architecture decisions
+    url: https://github.com/Crepco/SIH26155/tree/main/docs/adr
+    about: Decisions already made and not re-litigated. If you disagree, supersede the record rather than reopening the debate.
+  - name: Security concern
+    url: https://github.com/Crepco/SIH26155/blob/main/SECURITY.md
+    about: Report privately to a team member during the hackathon rather than opening a public issue.
