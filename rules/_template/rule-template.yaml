@@ -1,0 +1,73 @@
+# ---------------------------------------------------------------------------
+# Rule template. Copy, do not edit in place.
+# Spec: docs/04-rule-format.md   Contract: schemas/rule/v1.0.0/rule.schema.json
+# ---------------------------------------------------------------------------
+# A rule reads the IR and nothing else. It never reads raw configuration text,
+# never calls a function, and never asks a model anything.
+# ---------------------------------------------------------------------------
+
+- id: FRAMEWORK-SECTION-N.N.N
+  # Permanent. Appears in issued reports and in the hash-chained ledger.
+  # Never reuse an identifier, never renumber one.
+
+  title: "State the desired end state, not the violation"
+  # One line, imperative, under 160 characters.
+
+  frameworks:
+    # Cross-framework control IDENTIFIERS only. Never CIS Benchmark text.
+    - CIS-v8
+    - NIST-SP800-53:AC-0
+    - STIG-NET0000
+
+  severity: medium
+  # critical | high | medium | low | info
+  # Only high and critical are eligible for live verification against a twin.
+
+  applies_to:
+    # Optional guard. Omit entirely to apply to every device.
+    # A guarded-out rule reports not_applicable, never a silent pass.
+    vendor: [cisco, arista]
+    role:   [core, distribution]
+    os_version: ">=15.0"
+
+  assert: some.ir.path <= 10
+  # Three-valued. A null path yields unknown, which reports UNKNOWN and counts
+  # against coverage. It never quietly becomes a PASS.
+  # If absence should fail, write it: defined(some.ir.path) and some.ir.path <= 10
+
+  rationale: >
+    Our own prose, stating the consequence in operational terms. Why does an
+    attacker care, and what do they get. Never restate the title, and never
+    paste benchmark text.
+
+  remediation:
+    # Ordered. Safe to paste top to bottom. Must not disable the transport the
+    # administrator is currently connected over before the replacement is up.
+    cisco_ios:
+      - "configure terminal"
+      - " example command here"
+      - "end"
+      - "write memory"
+    juniper:
+      - "set system example 10"
+      - "commit"
+    fortios:
+      - "config system global"
+      - " set example 10"
+      - "end"
+    vyos:
+      # The Crucible twin render target. Present means the fix can be proven.
+      - "set service example 10"
+      - "commit"
+      - "save"
+
+  references:
+    # STIG and NIST text may be quoted. CIS text may not.
+    - "NIST SP 800-53 Rev 5 AC-0"
+
+  verify:
+    # Optional. Presence makes this finding eligible for DEMONSTRATED.
+    # Absent means the finding stays ASSERTED, which is honest and acceptable.
+    probe: no_session_timeout
+    params:
+      idle_seconds: 660
