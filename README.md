@@ -14,9 +14,10 @@ Smart India Hackathon 2026 · Problem Statement **SIH26155** · National Technic
 
 ---
 
-> **Status: Phase 0 — Foundations.** This repository currently contains the specification,
-> schemas and project scaffold. Implementation begins with Phase 1 (1 Sep 2026).
-> See [docs/12-execution-plan.md](docs/12-execution-plan.md).
+> **Status: Phase 1 — the baseline pipeline works end to end.** Upload a real configuration,
+> get a correct, line-cited, signed PDF. Six vendors parse, 13 CIS controls evaluate, findings
+> are hash-chained into a tamper-evident ledger. 92 tests pass with no third-party test runner.
+> The AI layer (Tiers 1–3) and Crucible are next — see [docs/12-execution-plan.md](docs/12-execution-plan.md).
 
 ## The problem
 
@@ -144,7 +145,46 @@ Full plan with owners and risks: [docs/12-execution-plan.md](docs/12-execution-p
 
 ## Getting started
 
-Setup instructions land with Phase 1. Until then:
+Python 3.11+. The core pipeline runs on the standard library plus three packages — and, like
+everything else here, it makes no network calls.
+
+```bash
+pip install pyyaml reportlab cryptography      # core
+pip install fastapi uvicorn                    # optional: the HTTP API
+
+cd backend
+python -m crucible.api.cli audit tests/fixtures/devices --rules ../rules/cis --out ../reports
+```
+
+That audits five real configurations from five vendors and writes a JSON, Markdown and PDF report
+per device, plus a signed `ledger.jsonl`. Then:
+
+```bash
+python -m crucible.api.cli verify ../reports/ledger.jsonl   # tamper check
+python -m crucible.api.cli show tests/fixtures/devices/cisco-ios-core-01   # the parsed IR
+python -m crucible.api.cli rules --rules ../rules/cis       # the loaded rule set
+python tests/run_tests.py                                   # 92 tests, no pytest required
+```
+
+Or through `make`: `make demo`, `make verify`, `make test`, `make serve`.
+
+### What a run looks like
+
+```
+  core-sw-01
+    cisco IOS 15.2(4)E10  serial FDO1234ABCD
+    score  [#######.................] 31%  -> 85% after remediation
+    checks fail 7  unknown 2  pass 4
+    parsed 163/164 lines (99.4%)  1 uninterpreted
+      FAIL critical CIS-NET-1.1.1  Telnet must be disabled on all management tr   running-config.txt:102
+      FAIL critical CIS-NET-2.1.2  No default or well-known SNMP community stri   running-config.txt:87
+      UNKN high     CIS-NET-5.3.1  Weak SSH key exchange algorithms must not be   no line to cite
+```
+
+Every failure cites a line. Every `UNKN` is a control we refused to guess at. Exit code `1` means
+findings, `2` means the audit could not run — a CI job must never confuse the two.
+
+### Where to read next
 
 - [docs/00-index.md](docs/00-index.md) — every specification, in reading order
 - [CONTRIBUTING.md](CONTRIBUTING.md) — track ownership, branch and commit conventions, and the
