@@ -115,10 +115,20 @@ class RuleSet:
         return RuleSet(rules=matched, sources=list(self.sources))
 
     def frameworks(self) -> list[str]:
+        """The framework *families* covered, not every control identifier.
+
+        A report header that lists fifteen individual STIG numbers tells a
+        reader nothing; "CIS-v8, DISA-STIG, NIST-SP800-53" tells them which
+        standards this audit speaks to. The individual identifiers stay on each
+        finding, where they are actually useful.
+        """
         seen: set[str] = set()
         for rule in self.rules:
             for identifier in rule.frameworks:
-                seen.add(identifier.split(":")[0])
+                family = identifier.split(":")[0]
+                if family.upper().startswith("STIG"):
+                    family = "DISA-STIG"
+                seen.add(family)
         return sorted(seen)
 
     @property
