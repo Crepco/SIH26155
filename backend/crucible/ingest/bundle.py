@@ -212,8 +212,27 @@ def load(target: str | Path, *, workdir: Path | None = None) -> list[DeviceBundl
         bundle = _bundle_from_directory(directory, directory.name)
         if bundle.files:
             bundles.append(bundle)
+
     if loose:
-        bundles.extend(_group_loose_files(loose, path))
+        # A directory holding one configuration plus its command output is one
+        # device's bundle, not several devices that happen to share a folder.
+        # Splitting it by filename stem would file the show output as its own
+        # device - which then has a serial number and no configuration, while
+        # the real device has a configuration and no serial.
+        config_count = sum(1 for p in loose if _classify(p.name) == "config")
+        if config_count <= 1 and not subdirectories:
+            bundle = DeviceBundle(device_id=path.name)
+            for file_path in loose:
+                bundle.files.append(
+                    SourceFile(
+                        name=f"{path.name}/{file_path.name}",
+                        text=_read_text(file_path),
+                        role=_classify(file_path.name),
+                    )
+                )
+            bundles.append(bundle)
+        else:
+            bundles.extend(_group_loose_files(loose, path))
 
     if not bundles:
         raise IngestError(f"no readable configuration files under {path}")
