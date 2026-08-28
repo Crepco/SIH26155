@@ -20,7 +20,7 @@ import hashlib
 import hmac
 import re
 
-__all__ = ["REDACTED", "fingerprint", "hash_algorithm_of", "redact"]
+__all__ = ["REDACTED", "fingerprint", "hash_algorithm_of", "redact", "redact_literal"]
 
 REDACTED = "<redacted>"
 
@@ -46,6 +46,12 @@ _SECRET_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
     # FortiOS
     (re.compile(r'(\bset\s+passwd\s+)(\S+)', re.IGNORECASE), 2),
     (re.compile(r'(\bset\s+psksecret\s+)(\S+)', re.IGNORECASE), 2),
+    # key=value grammars (RouterOS and friends), where the secret is glued to
+    # its key with no whitespace for the patterns above to anchor on.
+    (re.compile(r"(\bpassword=)(\S+)", re.IGNORECASE), 2),
+    (re.compile(r"(\bsecret=)(\S+)", re.IGNORECASE), 2),
+    (re.compile(r"(\bpsk=)(\S+)", re.IGNORECASE), 2),
+    (re.compile(r"(\bkey=)(\S+)", re.IGNORECASE), 2),
 )
 
 # Recognised password hash algorithms, keyed by the marker that identifies them.
@@ -86,6 +92,26 @@ def redact(line: str) -> str:
             lambda m, g=group: m.group(0).replace(m.group(g), REDACTED, 1), result
         )
     return result
+
+
+def redact_literal(line: str, secret: str | None) -> str:
+    """Strip a specific value a parser knows to be secret.
+
+    Line-local patterns cannot catch everything. FortiOS writes a community
+    string as `set name "public"` inside a `config system snmp community`
+    block: nothing on that line marks it as sensitive, and a pattern broad
+    enough to catch it would also redact every interface and policy name.
+
+    The parser has the block context, so it names the literal and this removes
+    it. Context-aware redaction beats a more aggressive regex.
+    """
+    line = redact(line)
+    if not secret:
+        return line
+    token = secret.strip().strip('"')
+    if not token or len(token) < 2:
+        return line
+    return line.replace(token, REDACTED)
 
 
 def hash_algorithm_of(token: str, cisco_type: str | None = None) -> str | None:

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from crucible.common.redaction import redact
+from crucible.common.redaction import redact, redact_literal
 from crucible.common.types import Provenance
 from crucible.ir.model import Coverage, IRDocument, split_path
 
@@ -88,14 +88,17 @@ class IRBuilder:
         adapter_pack: str | None = None,
         confidence_bp: int = 10000,
         claim: bool = True,
+        secret: str | None = None,
     ) -> None:
         """Write one fact, with the line that justifies it.
 
         The raw text is captured from the registered source and redacted before
         storage: evidence must be quotable in a report that may be handed to
-        someone who should not see a credential hash.
+        someone who should not see a credential hash. Pass ``secret`` when the
+        parser knows, from block context, that a particular literal on the line
+        is sensitive.
         """
-        raw = redact(self.raw_line(file, line))
+        raw = redact_literal(self.raw_line(file, line), secret)
         provenance = Provenance(
             file=file,
             line=line,
@@ -118,6 +121,7 @@ class IRBuilder:
         line: int,
         tier: int = 0,
         claim: bool = True,
+        secret: str | None = None,
     ) -> int:
         """Append to a list-valued path and return the index written.
 
@@ -135,7 +139,7 @@ class IRBuilder:
             raise TypeError(f"{path} is not a list")
         existing.append(value)
         index = len(existing) - 1
-        raw = redact(self.raw_line(file, line))
+        raw = redact_literal(self.raw_line(file, line), secret)
         self._provenance[f"{path}[{index}]"] = Provenance(
             file=file, line=line, raw=raw, tier=tier
         )

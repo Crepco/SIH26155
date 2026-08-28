@@ -71,8 +71,8 @@ class ParseContext:
     def set(self, path: str, value: object, line: int, **kwargs: object) -> None:
         self.builder.set(path, value, file=self.filename, line=line, **kwargs)  # type: ignore[arg-type]
 
-    def append(self, path: str, value: object, line: int) -> int:
-        return self.builder.append(path, value, file=self.filename, line=line)
+    def append(self, path: str, value: object, line: int, **kwargs: object) -> int:
+        return self.builder.append(path, value, file=self.filename, line=line, **kwargs)  # type: ignore[arg-type]
 
     def claim(self, line: int) -> None:
         self.builder.claim(self.filename, line, 0)
