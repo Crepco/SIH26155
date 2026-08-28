@@ -3,7 +3,61 @@
 Notable changes to Crucible. Format loosely follows Keep a Changelog; versions track the phase
 plan in [docs/12-execution-plan.md](docs/12-execution-plan.md).
 
-## [Unreleased] — Phase 0, Foundations (25–31 Aug 2026)
+## [0.1.0] — Phase 1, the baseline pipeline (28 Aug 2026)
+
+Upload a real configuration, get a correct, line-cited, signed PDF. The whole loop is closed.
+
+### Added
+
+- **Ingestion.** Files, directories, device bundles and zip archives. Archive handling refuses
+  path traversal, absolute members, symlinks and decompression bombs rather than sanitising them.
+  A directory holding one config plus its `show version` output is correctly read as one device.
+- **Fingerprinting.** Weighted signature scoring across six vendors with a published confidence.
+  Below the threshold no parser runs at all, so an unrecognised device reports UNKNOWN rather than
+  being misread by the wrong grammar. Serial, model and OS version are extracted from command
+  output and cited to a file and line.
+- **Tier-0 parsers.** Cisco IOS, Arista EOS (shared IOS-style walker), Fortinet FortiOS, Juniper
+  Junos, MikroTik RouterOS, plus a show-output reader. Every parser writes provenance with every
+  fact and accounts for every line it consumed.
+- **The IR.** `IRBuilder` refuses to record a fact without a source line, and computes coverage
+  from what was and was not claimed. `parsed + unparsed == total` is asserted, not assumed.
+- **Three-valued policy engine.** A Kleene-logic assertion language over the IR with `defined`,
+  `empty`, `count`, `all`, `any` and `subset`. A missing fact yields UNKNOWN and can never become
+  a PASS. Assertions compile at rule-load time, so a broken rule stops the run immediately.
+- **Reporting.** One assembled report rendered three ways — JSON, Markdown and a ReportLab PDF
+  with the verification hash on every page. Coverage is published, uninterpreted lines are listed
+  verbatim in Appendix C, and the what-if projection never assumes an UNKNOWN will pass.
+- **Remediation ordering.** Fixes are grouped into four phases so that pasting them top to bottom
+  cannot lock an administrator out: the safe path is established first, weak services are removed
+  second, and management access is narrowed last.
+- **Tamper-evident ledger.** Merkle-rooted reports with domain-separated leaves and odd-node
+  promotion, hash-chained into an append-only log and signed with Ed25519. Altering one historical
+  entry breaks its signature and every subsequent link.
+- **CLI.** `crucible audit | verify | rules | show`, with exit codes that distinguish "found
+  something serious" from "could not run".
+- **HTTP API.** FastAPI service for upload, audit, rules and ledger state, driving the same
+  runner as the CLI. Uploads are deleted before the response returns.
+- **92 tests**, runnable with no third-party test framework installed, covering all five
+  invariants, multi-vendor consistency, ledger tampering, archive attacks and the full pipeline.
+
+### Fixed during the build, each caught by a test
+
+- Only the last interface of a Cisco configuration reached the IR.
+- SNMP community strings survived redaction into evidence on four vendors.
+- `defined()` reported a confident FAIL on a device whose section was never parsed.
+- Loading a single device directory split it into two phantom devices.
+- Telnet remediation disabled the daemon before confirming SSH was up.
+- Fingerprint confidence was a float, which broke canonical IR export.
+
+### Known gaps
+
+- Tiers 1–3 (structural inference, model-proposed mappings, the training GUI) are specified but
+  not implemented. Unrecognised vendors currently fall through to UNKNOWN, which is correct
+  behaviour but not yet the learning loop.
+- PAN-OS has no Tier-0 parser yet; the fingerprinter recognises it.
+- Fleet graph, XCCDF import and Crucible remain Phase 3 and Phase 4.
+
+## [0.0.1] — Phase 0, Foundations (25–31 Aug 2026)
 
 ### Added
 
