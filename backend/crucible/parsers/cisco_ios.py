@@ -26,9 +26,15 @@ from crucible.parsers.base import Line, ParseContext, register
 __all__ = ["parse_ios_style"]
 
 _RE_HOSTNAME = re.compile(r"^hostname (\S+)")
+# The qualifier between `secret` and the digest is either a Cisco type number
+# (`secret 9 $9$...`) or, on Arista EOS, the algorithm spelled out
+# (`secret sha512 $6$...`). Reading the second form as the digest reported the
+# algorithm as unknown on a device that had actually done the right thing.
 _RE_USERNAME = re.compile(
-    r"^username (\S+)(?: privilege (\d+))?(?: role \S+)? (secret|password) (?:(\d+) )?(\S+)"
+    r"^username (\S+)(?: privilege (\d+))?(?: role \S+)? (secret|password)"
+    r"(?: (\d+|sha512|sha256|md5|bcrypt))? (\S+)"
 )
+_NAMED_ALGORITHMS = {"sha512", "sha256", "md5", "bcrypt"}
 _RE_TACACS_HOST = re.compile(r"^tacacs-server host (\S+)")
 _RE_RADIUS_HOST = re.compile(r"^radius-server host (\S+)")
 _RE_AAA_ADDRESS = re.compile(r"^address ipv4 (\S+)")
@@ -228,9 +234,12 @@ def _top_level(ctx: ParseContext, state: _State, line: Line, dialect: str) -> tu
 
     match = _RE_USERNAME.match(text)
     if match:
-        name, privilege, kind, type_number, secret = match.groups()
-        algorithm = hash_algorithm_of(secret, type_number)
-        if kind == "password" and type_number is None:
+        name, privilege, kind, qualifier, secret = match.groups()
+        if qualifier in _NAMED_ALGORITHMS:
+            algorithm = qualifier
+        else:
+            algorithm = hash_algorithm_of(secret, qualifier)
+        if kind == "password" and qualifier is None:
             algorithm = "plaintext"
         index = ctx.append(
             "aaa.local_users",

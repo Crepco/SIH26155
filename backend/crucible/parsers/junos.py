@@ -95,7 +95,11 @@ def parse_junos(ctx: ParseContext) -> None:
                 ctx.append("snmp.communities", marker, number, secret=community)
                 ctx.set("snmp.version", 2, number, claim=False, secret=community)
                 continue
-            if current.startswith("system login user "):
+            # Match on the BLOCK name, not the full path. Matching the path
+            # meant the nested `authentication {` block under a user also looked
+            # like a user declaration, so every account was recorded under the
+            # name "authentication" and the real username was lost.
+            if name.startswith("user ") and current.startswith("system login user"):
                 pending_user = name.split()[-1]
             ctx.claim(number)
             continue
@@ -157,13 +161,28 @@ def parse_junos(ctx: ParseContext) -> None:
                 ctx.set("ntp.authenticated", True, number)
                 continue
 
-        if head == "encrypted-password" and pending_user is not None:
-            algorithm = hash_algorithm_of(statement.split(None, 1)[1].strip('"'))
-            index = ctx.append(
-                "aaa.local_users", {"name": pending_user, "privilege": None, "hash": algorithm}, number
+        if head in ("encrypted-password", "plain-text-password"):
+            # `system root-authentication` carries the root credential with no
+            # enclosing user block. Skipping it meant the most privileged
+            # account on the device was never examined - and the line was left
+            # uninterpreted, which at least made the gap visible in coverage.
+            account = "root" if current == "system root-authentication" else pending_user
+            if account is None:
+                ctx.claim(number)
+                continue
+            secret = statement.split(None, 1)[1].strip('"') if len(parts) > 1 else ""
+            algorithm = (
+                "plaintext" if head == "plain-text-password" else hash_algorithm_of(secret)
             )
-            ctx.set(f"aaa.local_users[{index}].hash", algorithm, number)
-            pending_user = None
+            index = ctx.append(
+                "aaa.local_users",
+                {"name": account, "privilege": None, "hash": algorithm},
+                number,
+                secret=secret,
+            )
+            ctx.set(f"aaa.local_users[{index}].hash", algorithm, number, secret=secret)
+            if account != "root":
+                pending_user = None
             continue
 
         if current.startswith("system tacplus-server") or head == "tacplus-server":
