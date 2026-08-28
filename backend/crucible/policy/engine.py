@@ -29,6 +29,11 @@ from crucible.policy.ruleset import Rule, RuleSet
 
 __all__ = ["DeviceEvaluation", "evaluate_device"]
 
+#: Lines of configuration shown either side of a cited line. Three is enough to
+#: land the citation in its block - the vty stanza, the interface, the snmp
+#: section - without turning a finding into a page of config.
+EVIDENCE_RADIUS = 3
+
 #: How many evidence citations a single finding carries. A finding that cites
 #: forty lines is not more convincing than one that cites three; it is less
 #: readable, and readability is what makes a report get acted on.
@@ -95,7 +100,13 @@ def _evidence_for(ir: IRDocument, paths: list[str]) -> list[Evidence]:
                     provenance = candidate
                     break
         if provenance is not None:
-            evidence.append(Evidence.from_provenance(path, provenance))
+            evidence.append(
+                Evidence.from_provenance(
+                    path,
+                    provenance,
+                    ir.excerpt(provenance.file, provenance.line, EVIDENCE_RADIUS),
+                )
+            )
         if len(evidence) >= MAX_EVIDENCE:
             break
     return evidence

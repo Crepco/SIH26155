@@ -125,6 +125,11 @@ class IRDocument:
     coverage: Coverage = field(default_factory=Coverage)
     provenance: dict[str, Provenance] = field(default_factory=dict)
     schema_version: str = IR_SCHEMA_VERSION
+    #: Redacted source lines, per file, kept so a finding can be shown in the
+    #: block it came from. Deliberately excluded from :meth:`to_dict` - the IR
+    #: is a model of security posture, not a copy of the configuration, and an
+    #: exported IR should not smuggle the whole device out with it.
+    sources: dict[str, list[str]] = field(default_factory=dict, repr=False)
 
     # -- reading ----------------------------------------------------------
 
@@ -161,6 +166,15 @@ class IRDocument:
         return Resolution(
             path=path, value=current, found=True, provenance=self.provenance.get(path)
         )
+
+    def excerpt(self, file: str, line: int, radius: int = 3) -> tuple[tuple[int, str, bool], ...]:
+        """The lines around a citation, with the cited one marked."""
+        lines = self.sources.get(file)
+        if not lines:
+            return ()
+        start = max(1, line - radius)
+        end = min(len(lines), line + radius)
+        return tuple((n, lines[n - 1], n == line) for n in range(start, end + 1))
 
     def facts(self) -> dict[str, Provenance]:
         """Every path a parser wrote, with where it came from."""

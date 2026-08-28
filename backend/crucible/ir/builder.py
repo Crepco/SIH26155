@@ -236,4 +236,10 @@ class IRBuilder:
             sections=dict(self._sections),
             coverage=coverage,
             provenance=dict(self._provenance),
+            # Redacted at this boundary, once, so that nothing downstream can
+            # accidentally surface an unredacted line.
+            sources={
+                filename: [redact(lines[n]) for n in sorted(lines)]
+                for filename, lines in self._lines.items()
+            },
         )

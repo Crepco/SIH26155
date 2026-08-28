@@ -139,6 +139,12 @@ class Evidence:
 
     This is the answer to "how do I know your AI didn't invent this?" - the
     finding points at a file, a line number and the raw text that triggered it.
+
+    ``context`` carries the surrounding lines, redacted, as
+    ``(line number, text, is_the_cited_line)``. A bare quoted line proves the
+    tool read *something*; the same line sitting in its real block, at its real
+    number, is what lets a reader open the file and check. It costs a few lines
+    of storage and it is the difference between a citation and a screenshot.
     """
 
     ir_path: str
@@ -146,11 +152,22 @@ class Evidence:
     line: int
     raw: str
     tier: int
+    context: tuple[tuple[int, str, bool], ...] = ()
 
     @classmethod
-    def from_provenance(cls, ir_path: str, prov: Provenance) -> "Evidence":
+    def from_provenance(
+        cls,
+        ir_path: str,
+        prov: Provenance,
+        context: tuple[tuple[int, str, bool], ...] = (),
+    ) -> "Evidence":
         return cls(
-            ir_path=ir_path, file=prov.file, line=prov.line, raw=prov.raw, tier=prov.tier
+            ir_path=ir_path,
+            file=prov.file,
+            line=prov.line,
+            raw=prov.raw,
+            tier=prov.tier,
+            context=context,
         )
 
     def cite(self) -> str:
@@ -163,6 +180,9 @@ class Evidence:
             "line": self.line,
             "raw": self.raw,
             "tier": self.tier,
+            "context": [
+                {"line": n, "text": t, "cited": c} for n, t, c in self.context
+            ],
         }
 
 
