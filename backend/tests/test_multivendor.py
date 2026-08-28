@@ -121,3 +121,54 @@ def test_interfaces_normalise_to_a_common_shape():
         for interface in interfaces:
             assert {"name", "addresses", "acl_in", "shutdown"} <= interface.keys()
             assert isinstance(interface["name"], str) and interface["name"]
+
+
+def test_local_accounts_and_hash_algorithms_normalise_across_vendors():
+    """Every vendor spells the credential algorithm differently, or not at all.
+
+    Three shapes, one IR field:
+
+    - Cisco encodes the algorithm as a type number: ``secret 9 $9$...``
+    - Arista spells it out: ``secret sha512 $6$...``
+    - Junos gives only the digest and the prefix has to be read: ``$6$...``
+
+    RouterOS and FortiOS disclose no algorithm at all in an export, and the
+    honest answer there is ``None`` - which reaches the report as UNKNOWN rather
+    than as a guess.
+    """
+    expected = {
+        "cisco-ios-core-01": {"netadmin": "scrypt", "backup": "reversible"},
+        "arista-leaf-01": {"admin": "sha512"},
+        "junos-edge-01": {"root": "sha512", "netadmin": "sha512"},
+    }
+    for device, accounts in expected.items():
+        users = _evaluate(device, "aaa.local_users").value
+        found = {u["name"]: u["hash"] for u in users}
+        assert found == accounts, f"{device}: read accounts as {found}"
+
+
+def test_the_root_account_is_not_skipped_on_junos():
+    """`system root-authentication` has no enclosing user block.
+
+    Missing it meant the most privileged account on the device was never
+    examined by the credential control.
+    """
+    users = _evaluate("junos-edge-01", "aaa.local_users").value
+    assert any(u["name"] == "root" for u in users), "the root credential was not parsed"
+
+
+def test_no_block_name_is_ever_recorded_as_a_username():
+    """A nested block name must not be mistaken for an account.
+
+    Junos writes `user netadmin { authentication { encrypted-password ... } }`.
+    Matching on the path rather than the block name recorded every account under
+    the name "authentication" and lost the real one.
+    """
+    for device in ALL_DEVICES:
+        users = ir_for(device).resolve("aaa.local_users")
+        if not users.found:
+            continue
+        names = {u["name"] for u in users.value}
+        assert not (names & {"authentication", "login", "user", "system"}), (
+            f"{device}: a block name was recorded as a user: {names}"
+        )
