@@ -13,23 +13,33 @@
     access to a transit segment recovers administrative credentials passively,
     with no exploit and no trace in the device log.
   remediation:
+    # SSH is enabled and confirmed BEFORE Telnet is removed. Reversing these two
+    # steps disconnects an administrator who is currently connected over Telnet,
+    # on a device they may have no other path to.
     cisco_ios:
       - "configure terminal"
-      - "no ip telnet server"
+      - "ip ssh version 2"
       - "line vty 0 15"
       - " transport input ssh"
+      - "no ip telnet server"
       - "end"
       - "write memory"
     juniper:
+      - "set system services ssh protocol-version v2"
+      - "commit"
       - "delete system services telnet"
       - "commit"
     fortios:
       - "config system global"
+      - " set admin-ssh-v1 disable"
       - " set admin-telnet disable"
       - "end"
     routeros:
+      - "/ip service set ssh disabled=no"
       - "/ip service set telnet disabled=yes"
     vyos:
+      - "set service ssh"
+      - "commit"
       - "delete service telnet"
       - "commit"
       - "save"
