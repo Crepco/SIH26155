@@ -90,6 +90,7 @@ class AuditReport:
     def to_dict(self) -> dict[str, Any]:
         return {
             "report_id": self.report_id,
+            "device_id": self.device_id,
             "generated_at": self.generated_at,
             "tool_version": self.tool_version,
             "ir_schema_version": self.ir_schema_version,
