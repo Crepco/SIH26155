@@ -66,7 +66,7 @@ jobs:
         run: lint-imports
 
   test:
-    name: Unit tests
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -74,13 +74,54 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install
-        working-directory: backend
-        run: pip install -e ".[dev]"
+      # Deliberately minimal. The suite runs on the standard library plus the
+      # three packages the pipeline itself needs, because the deployment target
+      # is a machine with nothing else on it - so that is what CI proves.
+      - name: Install runtime dependencies only
+        run: pip install pyyaml reportlab cryptography
 
-      - name: Pytest
+      - name: Run the suite with no test framework installed
         working-directory: backend
-        run: pytest -m "not sandbox and not model" --cov=crucible --cov-report=term-missing
+        run: python tests/run_tests.py
+
+      - name: Run the same suite under pytest
+        working-directory: backend
+        run: |
+          pip install pytest
+          pytest -q
+
+  smoke:
+    name: End-to-end audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install runtime dependencies
+        run: pip install pyyaml reportlab cryptography
+
+      - name: Audit the bundled fixtures
+        working-directory: backend
+        # Exit 1 is the correct outcome: the fixtures are deliberately
+        # misconfigured and contain critical findings. Exit 2 would mean the
+        # auditor could not run, which is the failure we actually care about.
+        run: |
+          set +e
+          python -m crucible.api.cli audit tests/fixtures/devices             --rules ../rules/cis --out ../reports
+          code=$?
+          set -e
+          test "$code" -eq 1 || { echo "::error::expected exit 1, got $code"; exit 1; }
+
+      - name: Verify the ledger it produced
+        working-directory: backend
+        run: python -m crucible.api.cli verify ../reports/ledger.jsonl
+
+      - name: Check a PDF was actually written
+        run: |
+          test -s reports/cisco-ios-core-01.pdf
+          head -c 4 reports/cisco-ios-core-01.pdf | grep -q "%PDF"
 
   frontend:
     name: Frontend build
