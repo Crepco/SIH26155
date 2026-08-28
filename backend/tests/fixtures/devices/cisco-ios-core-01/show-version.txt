@@ -1,0 +1,55 @@
+core-sw-01#show version
+Cisco IOS Software, C2960X Software (C2960X-UNIVERSALK9-M), Version 15.2(4)E10, RELEASE SOFTWARE (fc2)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2021 by Cisco Systems, Inc.
+Compiled Wed 17-Mar-21 09:21 by prod_rel_team
+
+ROM: Bootstrap program is C2960X boot loader
+BOOTLDR: C2960X Boot Loader (C2960X-HBOOT-M) Version 15.2(4r)E1, RELEASE SOFTWARE (fc4)
+
+core-sw-01 uptime is 41 weeks, 2 days, 6 hours, 18 minutes
+System returned to ROM by power-on
+System restarted at 04:12:09 IST Mon Nov 11 2025
+System image file is "flash:/c2960x-universalk9-mz.152-4.E10.bin"
+Last reload reason: power-on
+
+This product contains cryptographic features and is subject to United
+States and local country laws governing import, export, transfer and
+use.
+
+Technology Package License Information:
+
+-----------------------------------------------------------------
+Technology-package                Technology-package
+Current                   Type    Next reboot
+-----------------------------------------------------------------
+lanbase                   Permanent    lanbase
+
+cisco WS-C2960X-48FPD-L (APM86XXX) processor (revision B0) with 524288K bytes of memory.
+Processor board ID FDO1234ABCD
+Last reset from power-on
+1 Virtual Ethernet interface
+52 Gigabit Ethernet interfaces
+2 Ten Gigabit Ethernet interfaces
+The password-recovery mechanism is enabled.
+
+512K bytes of flash-simulated non-volatile configuration memory.
+Base ethernet MAC Address       : 00:1A:2B:3C:4D:5E
+Motherboard assembly number     : 73-15800-04
+Power supply part number        : 341-0097-02
+Motherboard serial number       : FDO1234ABCD
+Model revision number           : B0
+Motherboard revision number     : A0
+Model number                    : WS-C2960X-48FPD-L
+System serial number            : FDO1234ABCD
+Top Assembly Part Number        : 800-31234-02
+Top Assembly Revision Number    : C0
+Version ID                      : V03
+CLEI Code Number                : CMM1400ARB
+Hardware Board Revision Number  : 0x02
+
+Switch Ports Model              SW Version            SW Image
+------ ----- -----              ----------            ----------
+*    1 52    WS-C2960X-48FPD-L  15.2(4)E10            C2960X-UNIVERSALK9-M
+
+Configuration register is 0xF

@@ -1,0 +1,69 @@
+! Command: show running-config
+! device: leaf-01 (DCS-7050SX3-48YC8, EOS-4.32.0F)
+!
+no aaa root
+!
+username admin privilege 15 role network-admin secret sha512 $6$leafsalt$Q1EXAMPLEhashvalue1234567890abcdef
+!
+transceiver qsfp default-mode 4x10G
+!
+hostname leaf-01
+ip name-server vrf default 10.0.0.53
+dns domain lab.example.net
+!
+spanning-tree mode mstp
+!
+management api http-commands
+   no shutdown
+!
+management ssh
+   idle-timeout 10
+   authentication mode keyboard-interactive
+!
+management telnet
+   shutdown
+!
+aaa authentication login default group tacacs+ local
+aaa accounting exec default start-stop group tacacs+
+!
+tacacs-server host 10.0.0.20
+!
+vlan 10
+   name USERS
+!
+vlan 900
+   name MANAGEMENT
+!
+interface Ethernet1
+   description uplink-to-core
+   switchport mode trunk
+   switchport trunk allowed vlan 10,900
+!
+interface Ethernet2
+   description server-facing
+   switchport access vlan 10
+   ip access-group SERVER_IN in
+!
+interface Ethernet3
+   description unused
+   shutdown
+!
+interface Management1
+   description oob-management
+   ip address 10.0.0.12/24
+!
+ip access-list SERVER_IN
+   10 permit tcp 10.0.0.0/24 any eq ssh
+   20 deny ip any any log
+!
+logging host 10.0.0.5
+logging trap informational
+!
+ntp authenticate
+ntp authentication-key 1 md5 ntpkeyvalue
+ntp trusted-key 1
+ntp server 10.0.0.1 key 1
+!
+snmp-server community observability ro SNMP_RO
+!
+end
