@@ -330,17 +330,32 @@ def _truthy(value: Any) -> bool:
 
 
 def _fn_defined(node: _Call, scope: _Scope) -> Any:
-    """``defined(path)`` - the only escape hatch from three-valued logic.
+    """``defined(path)`` - the explicit "absence is a violation" escape hatch.
 
-    Always True or False, never UNKNOWN. A rule author who wants absence to
-    count as a violation has to say so explicitly with this, which makes the
-    intent visible in the rule file rather than implicit in the evaluator.
+    A rule author who wants a missing setting to count as a failure has to say
+    so with this, which keeps the intent in the rule file rather than hidden in
+    the evaluator.
+
+    One case is *not* a violation, though, and getting it wrong would break
+    invariant 3: when the whole section is absent, we did not read the device.
+    ``defined(mgmt.mgmt_acl)`` is False on a device whose management plane we
+    parsed and which has no ACL - that is a real finding. On a device where
+    nothing under ``mgmt`` was ever parsed, the answer is UNKNOWN, because we
+    have no basis for either claim. Returning False there would let a device we
+    could not read generate confident failures.
     """
     if len(node.args) != 1:
         raise RuleError("defined() takes exactly one argument")
     argument = node.args[0]
     if not isinstance(argument, _Path):
         raise RuleError("defined() takes a path")
+
+    if not scope.in_element:
+        root = argument.path.split(".")[0].split("[")[0]
+        if root in _IR_ROOTS and not scope.ir.resolve(root).found:
+            scope.missing.append(root)
+            return UNKNOWN
+
     before = len(scope.missing)
     value = argument.evaluate(scope)
     # Absence is this function's answer, not a failure to decide, so the paths
