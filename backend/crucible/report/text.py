@@ -50,7 +50,8 @@ def render_markdown(report: AuditReport) -> str:
         # A serial we could not find is stated as such. Leaving the cell blank
         # invites a reader to assume the field was not required.
         add(f"| {label} | {value if value else '_not present in the supplied files_'} |")
-    add(f"| Fingerprint confidence | {device.get('fingerprint_confidence', 0)} |")
+    confidence = device.get("fingerprint_confidence_bp", 0) / 100
+    add(f"| Fingerprint confidence | {confidence:.0f}% |")
     add("")
 
     # -- 2. posture --------------------------------------------------------

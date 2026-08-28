@@ -212,7 +212,7 @@ def _cmd_show(args: argparse.Namespace) -> int:
         ir = parsed.ir
         print()
         print(f"  {bundle.device_id}   {ir.vendor} {ir.device.get('os') or ''}   "
-              f"confidence {ir.device.get('fingerprint_confidence')}")
+              f"confidence {ir.device.get('fingerprint_confidence_bp', 0) / 100:.0f}%")
         print(f"  {ir.coverage.statement()}")
         print()
         for path, provenance in sorted(ir.facts().items()):

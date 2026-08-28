@@ -119,7 +119,7 @@ class DeviceIdentity:
             "model": self.model,
             "serial": self.serial,
             "hostname": self.hostname,
-            "fingerprint_confidence": round(self.confidence, 2),
+            "fingerprint_confidence_bp": round(self.confidence * 10000),
         }
 
 

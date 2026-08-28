@@ -60,7 +60,13 @@ def build_ir(bundle: DeviceBundle) -> ParsedDevice:
         builder.set_device_unsourced("version", identity.version)
     if identity.hostname:
         builder.set_device_unsourced("hostname", identity.hostname)
-    builder.set_device_unsourced("fingerprint_confidence", round(identity.confidence, 2))
+    # Basis points, not a float. Floating point is banned from anything that
+    # gets canonically serialised: the last bit can differ between platforms,
+    # and an IR export that is not byte-identical between runs cannot be diffed
+    # for drift or committed to reproducibly.
+    builder.set_device_unsourced(
+        "fingerprint_confidence_bp", round(identity.confidence * 10000)
+    )
 
     # Identity from command output overwrites the guess, and does so with a
     # citation - a serial read off show version beats anything inferred.

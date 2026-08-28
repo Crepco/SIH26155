@@ -7,7 +7,7 @@
     "model": "WS-C2960X-48FPD-L",
     "serial": "FDO1234ABCD",
     "hostname": "core-sw-01",
-    "fingerprint_confidence": 1.0
+    "fingerprint_confidence_bp": 10000
   },
   "mgmt": {
     "telnet_enabled": false,

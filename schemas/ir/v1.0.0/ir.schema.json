@@ -24,7 +24,10 @@
         "model":         { "type": ["string", "null"] },
         "serial":        { "type": ["string", "null"] },
         "hostname":      { "type": ["string", "null"] },
-        "fingerprint_confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        "fingerprint_confidence_bp": {
+          "type": "integer", "minimum": 0, "maximum": 10000,
+          "description": "Basis points, 0-10000. An integer because floats are not permitted anywhere that gets canonically serialised."
+        }
       }
     },
 
