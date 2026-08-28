@@ -79,8 +79,8 @@ def parse_routeros(ctx: ParseContext) -> None:
         if command_path.startswith("/snmp community"):
             name = values.get("name", "")
             marker = "default" if name.lower() in DEFAULT_COMMUNITIES else "custom"
-            ctx.append("snmp.communities", marker, number)
-            ctx.set("snmp.version", 2, number, claim=False)
+            ctx.append("snmp.communities", marker, number, secret=name)
+            ctx.set("snmp.version", 2, number, claim=False, secret=name)
             continue
 
         if command_path == "/snmp" and "enabled" in values:

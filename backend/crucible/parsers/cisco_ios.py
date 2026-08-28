@@ -142,7 +142,10 @@ def parse_ios_style(ctx: ParseContext, *, dialect: str = "cisco") -> None:
 
         # --- top-level statements ----------------------------------------
         if line.indent == 0:
-            if state.interfaces and not line.text.startswith("interface "):
+            # Any unindented line closes the interface under construction -
+            # including the *next* interface line. Flushing only on a non-
+            # interface line silently dropped every interface but the last.
+            if state.interfaces:
                 _finish_interface(ctx, state)
                 state.interfaces.clear()
                 state.interface_lines.clear()
@@ -298,8 +301,8 @@ def _top_level(ctx: ParseContext, state: _State, line: Line, dialect: str) -> tu
         # Store a marker, never the string. What a rule needs to know is whether
         # a v1/v2c community exists at all, and whether it is a default one.
         marker = "default" if community.lower() in DEFAULT_COMMUNITIES else "custom"
-        ctx.append("snmp.communities", marker, number)
-        ctx.set("snmp.version", 2, number, claim=False)
+        ctx.append("snmp.communities", marker, number, secret=community)
+        ctx.set("snmp.version", 2, number, claim=False, secret=community)
         return "", ""
     if _RE_SNMP_GROUP_V3.match(text) or text.startswith("snmp-server user"):
         ctx.set("snmp.version", 3, number)

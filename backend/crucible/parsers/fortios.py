@@ -179,8 +179,8 @@ def parse_fortios(ctx: ParseContext) -> None:
             if key == "name":
                 community_is_default = (value.lower() in DEFAULT_COMMUNITIES, number)
                 marker = "default" if value.lower() in DEFAULT_COMMUNITIES else "custom"
-                ctx.append("snmp.communities", marker, number)
-                ctx.set("snmp.version", 2, number, claim=False)
+                ctx.append("snmp.communities", marker, number, secret=value)
+                ctx.set("snmp.version", 2, number, claim=False, secret=value)
                 continue
 
         if section == "system snmp user":

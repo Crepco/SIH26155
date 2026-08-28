@@ -92,8 +92,8 @@ def parse_junos(ctx: ParseContext) -> None:
             if current.startswith("snmp community "):
                 community = name.split(None, 1)[1] if " " in name else ""
                 marker = "default" if community.lower() in DEFAULT_COMMUNITIES else "custom"
-                ctx.append("snmp.communities", marker, number)
-                ctx.set("snmp.version", 2, number, claim=False)
+                ctx.append("snmp.communities", marker, number, secret=community)
+                ctx.set("snmp.version", 2, number, claim=False, secret=community)
                 continue
             if current.startswith("system login user "):
                 pending_user = name.split()[-1]
