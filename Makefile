@@ -19,7 +19,9 @@ setup: ## Install backend and frontend dependencies for development
 	cd backend && pip install -e ".[dev,ai]"
 	cd frontend && npm ci
 
-check: lint types imports contracts test ## Everything CI runs, locally
+check: contracts test ## Everything CI runs, locally
+
+check-full: lint types imports contracts test ## Adds ruff and mypy (needs the dev extra)
 
 lint: ## Ruff
 	cd backend && ruff check .
@@ -46,7 +48,10 @@ contracts: ## Validate every schema, every rule file and the worked IR example
 
 # --- tests -----------------------------------------------------------------
 
-test: ## Unit tests, no containers and no model
+test: ## Run the suite (pytest if installed, standalone runner otherwise)
+	cd backend && python tests/run_tests.py
+
+test-pytest: ## Run under pytest, skipping sandbox and model tests
 	cd backend && pytest -m "not sandbox and not model"
 
 test-all: ## Everything, including sandbox and model tests
@@ -54,6 +59,17 @@ test-all: ## Everything, including sandbox and model tests
 
 airgap-check: ## Fail if a cloud SDK or external asset host appears anywhere
 	@bash scripts/check-airgap.sh
+
+# --- running it ------------------------------------------------------------
+
+demo: ## Audit the bundled five-vendor fixtures and write reports to ./reports
+	cd backend && python -m crucible.api.cli audit tests/fixtures/devices 	  --rules ../rules/cis --out ../reports
+
+serve: ## Start the HTTP API on 127.0.0.1:8000
+	cd backend && uvicorn crucible.api.main:app --host 127.0.0.1 --port 8000
+
+verify: ## Verify the ledger produced by `make demo`
+	cd backend && python -m crucible.api.cli verify ../reports/ledger.jsonl
 
 # --- corpus and labs -------------------------------------------------------
 
