@@ -1,10 +1,13 @@
-"""HTTP API for the dashboard.
+"""HTTP API, and the audit console it serves.
 
-The same :func:`crucible.api.runner.run_audit` the CLI drives, exposed over
-HTTP so the Next.js frontend can bulk-upload and render results. There is
-deliberately no second code path: a dashboard that computed its own verdicts
-would eventually disagree with the signed PDF, and then neither could be
-trusted.
+The same :func:`crucible.api.runner.run_audit` the CLI drives, exposed over HTTP
+and rendered by the console at ``/``. There is deliberately no second code path:
+a dashboard that computed its own verdicts would eventually disagree with the
+signed PDF, and then neither could be trusted.
+
+The console is static HTML, CSS and JavaScript served from ``frontend/public``.
+No bundler, no package manager, no third-party code - so "this page makes no
+external request" is a property that can be checked rather than claimed.
 
 **Deployment note.** This service binds to the deployment only. It makes no
 outbound requests of any kind, and it must be run behind the operator's own
@@ -21,6 +24,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from crucible import IR_SCHEMA_VERSION, __version__
 from crucible.api.runner import run_audit
@@ -33,6 +37,8 @@ __all__ = ["app", "create_app"]
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_RULES = REPO_ROOT / "rules" / "cis"
+CONSOLE = REPO_ROOT / "frontend" / "public"
+SAMPLE_FLEET = REPO_ROOT / "backend" / "tests" / "fixtures" / "devices"
 DATA_DIR = Path(tempfile.gettempdir()) / "crucible-data"
 
 
@@ -143,6 +149,30 @@ def create_app(rules_path: Path | None = None, data_dir: Path | None = None) -> 
             raise HTTPException(status_code=404, detail="no such report")
         return FileResponse(target)
 
+    @app.post("/demo")
+    def demo() -> JSONResponse:
+        """Audit the bundled sample fleet.
+
+        An evaluator should never meet a blank screen with a file picker on it.
+        This runs the five real multi-vendor configurations that ship with the
+        repository, so the console has something true to show within a second of
+        being opened.
+        """
+        if not SAMPLE_FLEET.exists():
+            raise HTTPException(status_code=404, detail="the sample fleet is not installed")
+        job = run_audit(
+            SAMPLE_FLEET,
+            rules_path=rules,
+            output_dir=data / "reports",
+            formats=("json", "md", "pdf"),
+        )
+        payload = job.to_dict()
+        payload["artefacts"] = {
+            result.device_id: {k: Path(v).name for k, v in result.artefacts.items()}
+            for result in job.results
+        }
+        return JSONResponse(payload)
+
     @app.get("/ledger")
     def ledger_endpoint() -> dict[str, Any]:
         """Ledger state and whether it still verifies."""
@@ -171,6 +201,15 @@ def create_app(rules_path: Path | None = None, data_dir: Path | None = None) -> 
                 for entry in ledger
             ],
         }
+
+    # The console is served from the deployment, never from a CDN. Mounted last
+    # so that an API route always wins over a static path of the same name.
+    if CONSOLE.exists():
+        app.mount("/static", StaticFiles(directory=CONSOLE), name="static")
+
+        @app.get("/", include_in_schema=False)
+        def console() -> FileResponse:
+            return FileResponse(CONSOLE / "index.html")
 
     return app
 
