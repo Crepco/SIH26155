@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crucible — audit console</title>
+<meta name="description" content="Vendor-agnostic network security compliance auditor. Runs fully offline.">
+<!-- No external stylesheet, script, font or icon. Everything this page needs is
+     served from the deployment, because the whole product claim is that it runs
+     with the network cable out. See docs/11-air-gap.md. -->
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<header class="instrument">
+  <span class="instrument__mark">CRUCIBLE</span>
+  <span class="instrument__tagline">compliance you can prove</span>
+  <span class="instrument__spacer"></span>
+  <span class="instrument__stat" id="stat-rules">rules <b>—</b></span>
+  <span class="instrument__stat" id="stat-ledger">ledger <b>—</b></span>
+  <span class="lamp" title="No outbound network call in any code path">OFFLINE</span>
+</header>
+
+<main class="shell">
+
+  <!-- ── fleet ─────────────────────────────────────────────────────────── -->
+  <nav class="rail" aria-label="Audited devices">
+    <div class="rail__head">
+      <span>FLEET</span>
+      <span id="fleet-count">0</span>
+    </div>
+    <ul class="rail__list" id="fleet"></ul>
+    <div style="padding:.7rem">
+      <button class="btn btn--ghost" id="add-more" style="width:100%">Add configurations</button>
+    </div>
+  </nav>
+
+  <!-- ── document ──────────────────────────────────────────────────────── -->
+  <div>
+    <p class="error hidden" id="error" role="alert"></p>
+
+    <!-- Empty state. An invitation to act, with the sample fleet one click
+         away so an evaluator never faces a blank screen. -->
+    <section class="drop" id="drop">
+      <h1 class="drop__head">No configurations loaded</h1>
+      <p class="drop__sub">
+        Drop a device configuration here — Cisco IOS, Arista EOS, FortiOS, Junos or
+        RouterOS. Include the <code>show version</code> output and the report will
+        carry the serial number too.
+      </p>
+      <div class="actions">
+        <button class="btn" id="run-sample">Audit the sample fleet</button>
+        <button class="btn btn--ghost" id="choose">Choose files</button>
+      </div>
+      <p class="working hidden" id="working" style="justify-content:center;margin-top:1rem">
+        Parsing, evaluating and signing…
+      </p>
+      <input type="file" id="file-input" multiple class="hidden">
+    </section>
+
+    <article class="sheet hidden" id="sheet">
+      <div class="sheet__head">
+        <h1 class="sheet__title" id="d-name">—</h1>
+        <p class="sheet__ident" id="d-ident"></p>
+      </div>
+
+      <section class="section coverage">
+        <h2 class="section__label"><span>COVERAGE</span><span id="cov-tier"></span></h2>
+        <div class="coverage__figure">
+          <span class="coverage__pct" id="cov-pct">—</span>
+          <span class="coverage__of" id="cov-of"></span>
+        </div>
+        <div class="meter"><div class="meter__fill" id="cov-bar"></div></div>
+        <p class="coverage__note" id="cov-note"></p>
+      </section>
+
+      <section class="section">
+        <h2 class="section__label"><span>POSTURE</span><span id="frameworks"></span></h2>
+        <div class="tally" id="tally"></div>
+      </section>
+
+      <section class="section">
+        <h2 class="section__label">
+          <span>FINDINGS</span>
+          <span class="filters" id="filters">
+            <button class="chip" data-filter="all" aria-pressed="true">ALL</button>
+            <button class="chip" data-filter="fail" aria-pressed="false">FAILED</button>
+            <button class="chip" data-filter="unknown" aria-pressed="false">UNKNOWN</button>
+            <button class="chip" data-filter="serious" aria-pressed="false">CRITICAL + HIGH</button>
+          </span>
+        </h2>
+        <div class="register" id="register"></div>
+      </section>
+
+      <section class="section" id="plan-section">
+        <h2 class="section__label"><span>REMEDIATION</span><span id="plan-count"></span></h2>
+        <p class="notice">
+          Ordered so that applying it top to bottom cannot lock you out. The safe path is
+          established before the weak services it replaces are disabled, and management
+          access is narrowed last.
+        </p>
+        <div id="plan"></div>
+      </section>
+
+      <section class="section hidden" id="unparsed-section">
+        <h2 class="section__label"><span>NOT INTERPRETED</span><span id="unparsed-count"></span></h2>
+        <p class="notice">
+          Lines this build could not read, verbatim. Each one is a control that could not be
+          evaluated — never one that quietly passed.
+        </p>
+        <div class="excerpt"><div class="excerpt__lines" id="unparsed"></div></div>
+      </section>
+
+      <footer class="seal">
+        <span>report <b id="s-report">—</b></span>
+        <span>merkle <b class="seal__hash" id="s-merkle">—</b></span>
+        <span>ledger entry <b id="s-seq">—</b></span>
+        <span>verify <b class="seal__hash" id="s-verify">—</b></span>
+        <span>rules <b id="s-rules">—</b></span>
+        <span>IR <b id="s-ir">—</b></span>
+      </footer>
+    </article>
+
+    <section class="sheet hidden" id="ledger-sheet" style="margin-top:1.25rem">
+      <div class="section">
+        <h2 class="section__label"><span>AUDIT LEDGER</span><span id="ledger-state"></span></h2>
+        <p class="notice">
+          Each entry commits to the hash of the one before it. Altering a finding in any past
+          report breaks its Merkle root, which breaks that entry, which breaks every entry after.
+        </p>
+        <ul class="chain" id="chain"></ul>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
