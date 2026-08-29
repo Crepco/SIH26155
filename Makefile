@@ -65,7 +65,7 @@ airgap-check: ## Fail if a cloud SDK or external asset host appears anywhere
 demo: ## Audit the bundled five-vendor fixtures and write reports to ./reports
 	cd backend && python -m crucible.api.cli audit tests/fixtures/devices 	  --rules ../rules/cis --out ../reports
 
-serve: ## Start the HTTP API on 127.0.0.1:8000
+serve: ## Start the API and the audit console on http://127.0.0.1:8000
 	cd backend && uvicorn crucible.api.main:app --host 127.0.0.1 --port 8000
 
 verify: ## Verify the ledger produced by `make demo`
