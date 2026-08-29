@@ -1,0 +1,638 @@
+/* ===========================================================================
+   Crucible — audit console
+   ---------------------------------------------------------------------------
+   Direction: this is not a security dashboard. It is the living version of the
+   signed audit sheet the tool produces — a cool-paper instrument printout.
+   Every competing product in this category is dark with a neon accent; the
+   deliverable here is a *document*, so the console reads like one.
+
+   The type is deliberately inverted from the usual: monospace for all chrome,
+   labels, numbers and navigation, because the whole interface is quoting
+   machine text and should look like it. A book serif is reserved for the
+   sentences a human wrote — the rationale under a finding, and nothing else.
+
+   No web fonts, no CDN, no external asset of any kind. That is not a stylistic
+   choice, it is the deployment requirement: this has to render with the network
+   cable out. See docs/11-air-gap.md.
+   =========================================================================== */
+
+:root {
+  --paper:  #e7ecef;
+  --sheet:  #ffffff;
+  --ink:    #0e1a24;
+  --rule:   #c3cdd5;
+  --muted:  #5c6c7a;
+
+  /* Signal. Three states, three treatments, never collapsed into two. */
+  --fail:   #a8302a;
+  --warn:   #8a5a11;
+  --pass:   #1b6a47;
+  --unknown: var(--muted);
+
+  --mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "SF Mono", Consolas,
+          "Liberation Mono", monospace;
+  --serif: "Palatino Linotype", "Iowan Old Style", Palatino, "Book Antiqua",
+           Georgia, serif;
+
+  --rail-w: 15.5rem;
+  --bar-h: 2.75rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  /* Faint graph rule. The ground this instrument prints on. */
+  background-image:
+    repeating-linear-gradient(0deg, rgba(14,26,36,.028) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(90deg, rgba(14,26,36,.028) 0 1px, transparent 1px 28px);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-ligatures: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* --- instrument bar ------------------------------------------------------ */
+
+.instrument {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  height: var(--bar-h);
+  padding: 0 1rem;
+  background: var(--ink);
+  color: #dfe6ea;
+  border-bottom: 1px solid var(--ink);
+}
+
+.instrument__mark {
+  font-weight: 700;
+  letter-spacing: .18em;
+  font-size: 12px;
+}
+
+.instrument__tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: #93a5b1;
+  letter-spacing: 0;
+}
+
+.instrument__spacer { flex: 1; }
+
+.instrument__stat {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: #93a5b1;
+  white-space: nowrap;
+}
+.instrument__stat b { color: #dfe6ea; font-weight: 600; }
+
+/* The offline lamp is the claim this project lives or dies on, so it is stated
+   in the chrome rather than buried in an about box. */
+.lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .15rem .5rem;
+  border: 1px solid #35485a;
+  color: #9fd7bb;
+  font-size: 11px;
+  letter-spacing: .1em;
+}
+.lamp::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #4fbc8a;
+  box-shadow: 0 0 0 2px rgba(79,188,138,.25);
+}
+
+/* --- shell --------------------------------------------------------------- */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.25rem;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 5rem;
+}
+
+/* --- fleet rail ---------------------------------------------------------- */
+
+.rail {
+  position: sticky;
+  top: calc(var(--bar-h) + 1.25rem);
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.rail__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: .55rem .7rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  letter-spacing: .14em;
+  color: var(--muted);
+}
+
+.rail__list { list-style: none; margin: 0; padding: 0; }
+
+.device {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: .6rem .7rem;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.device:hover { background: #f2f6f8; }
+.device[aria-current="true"] {
+  border-left-color: var(--ink);
+  background: #f2f6f8;
+}
+
+.device__name {
+  display: block;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device__meta {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: .1rem;
+}
+
+.device__score {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .4rem;
+  font-size: 11px;
+}
+
+/* --- the meter ----------------------------------------------------------- */
+/* Segmented rather than a smooth bar: this is a count of controls, and a
+   continuous fill would imply a precision the number does not have. */
+
+.meter {
+  flex: 1;
+  height: 6px;
+  background: #e3e9ed;
+  border: 1px solid var(--rule);
+  position: relative;
+  overflow: hidden;
+}
+.meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pct, 0%);
+  background: var(--ink);
+  transform-origin: left;
+  animation: draw .6s cubic-bezier(.2,.7,.3,1) both;
+}
+.meter--fail .meter__fill { background: var(--fail); }
+.meter--warn .meter__fill { background: var(--warn); }
+.meter--pass .meter__fill { background: var(--pass); }
+
+@keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* --- sheet --------------------------------------------------------------- */
+
+.sheet {
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+  box-shadow: 0 1px 0 rgba(14,26,36,.06);
+  min-width: 0;
+}
+
+.sheet__head {
+  padding: 1.1rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.sheet__title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.sheet__ident {
+  margin: .3rem 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sheet__ident b { color: var(--ink); font-weight: 600; }
+
+.section {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+.section:last-child { border-bottom: 0; }
+
+.section__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 .7rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  color: var(--muted);
+}
+
+/* --- coverage ------------------------------------------------------------ */
+/* Always on screen, never behind a tab. It is the number that makes the rest
+   credible, and no competing tool volunteers it. */
+
+.coverage__figure {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+.coverage__pct { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.coverage__of  { font-size: 12px; color: var(--muted); }
+
+.coverage .meter { height: 10px; margin: .6rem 0 .5rem; }
+
+.coverage__note {
+  font-family: var(--serif);
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.linkish {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* --- tallies ------------------------------------------------------------- */
+
+.tally {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  border: 1px solid var(--rule);
+  border-right: 0;
+}
+.tally__cell {
+  padding: .55rem .7rem;
+  border-right: 1px solid var(--rule);
+}
+.tally__n { display: block; font-size: 20px; font-weight: 700; }
+.tally__k {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+.tally__cell--fail .tally__n { color: var(--fail); }
+.tally__cell--pass .tally__n { color: var(--pass); }
+
+/* --- findings register --------------------------------------------------- */
+
+.filters { display: flex; gap: .35rem; flex-wrap: wrap; }
+.chip {
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .08em;
+  padding: .18rem .5rem;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.register { border-top: 1px solid var(--rule); }
+
+.finding { border-bottom: 1px solid var(--rule); }
+
+.finding__row {
+  display: grid;
+  grid-template-columns: 5.5rem 7rem 1fr auto;
+  gap: .75rem;
+  align-items: baseline;
+  width: 100%;
+  padding: .6rem .1rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.finding__row:hover { background: #f5f8fa; }
+
+.sev {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  padding: .1rem .35rem;
+  border: 1px solid currentColor;
+  justify-self: start;
+}
+.sev--critical { color: var(--sheet); background: var(--fail); border-color: var(--fail); }
+.sev--high     { color: var(--fail); }
+.sev--medium   { color: var(--warn); }
+.sev--low, .sev--info { color: var(--muted); }
+
+.finding__id { font-size: 12px; color: var(--muted); }
+.finding__title { font-weight: 600; }
+
+/* The state word carries a rule beneath it in its own colour — grey is not
+   green, and it should not be possible to skim past that. */
+.state {
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  padding-bottom: 2px;
+  border-bottom: 2px solid currentColor;
+  white-space: nowrap;
+}
+.state--demonstrated { color: var(--fail); }
+.state--asserted     { color: var(--warn); }
+.state--unknown      { color: var(--unknown); }
+
+.finding__body {
+  padding: .2rem 0 1rem 5.5rem;
+  display: grid;
+  gap: .75rem;
+}
+.finding__rationale {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 62ch;
+}
+
+.meta { font-size: 11px; color: var(--muted); }
+
+/* ===========================================================================
+   THE EVIDENCE GUTTER — the signature element
+   ---------------------------------------------------------------------------
+   Everything else on this page is deliberately quiet so that this can be loud.
+   It is the one thing this tool can show that no competitor can: the finding,
+   sitting in the real configuration, at its real line number. A reader can open
+   the file and check. That is the whole argument of the project, rendered.
+   =========================================================================== */
+
+.excerpt {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink);
+  background: #fbfcfd;
+  overflow-x: auto;
+}
+
+.excerpt__file {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .35rem .6rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  color: var(--muted);
+  background: #f2f6f8;
+  position: sticky;
+  left: 0;
+}
+
+.excerpt__lines { margin: 0; padding: .35rem 0; }
+
+.excerpt__line {
+  display: grid;
+  grid-template-columns: 3.75rem 1fr;
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre;
+}
+.excerpt__no {
+  text-align: right;
+  padding-right: .8rem;
+  color: #93a3ae;
+  border-right: 1px solid var(--rule);
+  user-select: none;
+}
+.excerpt__text { padding-left: .8rem; }
+
+.excerpt__line--cited { background: rgba(168,48,42,.07); }
+.excerpt__line--cited .excerpt__no {
+  color: var(--fail);
+  font-weight: 700;
+  border-right-color: var(--fail);
+}
+.excerpt__line--cited .excerpt__text { font-weight: 700; }
+.excerpt__line--cited .excerpt__text::after {
+  content: "  \25C4";              /* ◄ points at the line that triggered it */
+  color: var(--fail);
+}
+
+/* --- absent facts -------------------------------------------------------- */
+/* A failure caused by absence has no line to cite. Saying which setting was
+   never found is the honest substitute for a citation. */
+
+.absent {
+  border: 1px dashed var(--rule);
+  padding: .5rem .6rem;
+  color: var(--muted);
+  font-size: 12px;
+}
+.absent code { color: var(--ink); font-weight: 600; }
+
+/* --- remediation --------------------------------------------------------- */
+
+.phase { margin-bottom: .9rem; }
+.phase__head {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  font-size: 11px;
+  letter-spacing: .1em;
+  color: var(--muted);
+  padding-bottom: .3rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: .4rem;
+}
+.phase__n {
+  color: var(--sheet);
+  background: var(--ink);
+  padding: .05rem .4rem;
+  font-weight: 700;
+}
+.cli {
+  margin: 0;
+  padding: .55rem .7rem;
+  background: var(--ink);
+  color: #e2e9ee;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.cli .cmt { color: #7d94a4; }
+
+.notice {
+  font-family: var(--serif);
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 0 0 .7rem;
+  max-width: 66ch;
+}
+
+/* --- seal / integrity ---------------------------------------------------- */
+
+.seal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem 1.5rem;
+  padding: .8rem 1.25rem;
+  background: #f2f6f8;
+  border-top: 1px solid var(--ink);
+  font-size: 11px;
+  color: var(--muted);
+}
+.seal b { color: var(--ink); font-weight: 600; }
+.seal__hash { letter-spacing: .04em; }
+
+/* --- ledger -------------------------------------------------------------- */
+
+.chain { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.chain li {
+  display: grid;
+  grid-template-columns: 2.5rem 12rem 1fr auto;
+  gap: .75rem;
+  padding: .35rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.chain__seq { color: var(--muted); text-align: right; }
+
+/* --- empty state --------------------------------------------------------- */
+/* An empty screen is an invitation to act, not a shrug. */
+
+.drop {
+  border: 1px dashed var(--rule);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  background: var(--sheet);
+}
+.drop.is-over { border-color: var(--ink); background: #f2f6f8; }
+.drop__head {
+  font-family: var(--serif);
+  font-size: 21px;
+  margin: 0 0 .4rem;
+}
+.drop__sub {
+  font-family: var(--serif);
+  color: var(--muted);
+  margin: 0 auto 1.1rem;
+  max-width: 46ch;
+  font-size: 14.5px;
+}
+
+.btn {
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: .08em;
+  padding: .45rem .9rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--sheet);
+  cursor: pointer;
+}
+.btn:hover { background: #1b2c3a; }
+.btn--ghost { background: transparent; color: var(--ink); }
+.btn--ghost:hover { background: #e9eef1; }
+.btn[disabled] { opacity: .45; cursor: progress; }
+
+.actions { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; }
+
+.error {
+  border-left: 3px solid var(--fail);
+  background: #fbf2f1;
+  padding: .6rem .8rem;
+  color: var(--fail);
+  margin: 0 0 1rem;
+}
+
+/* --- working ------------------------------------------------------------- */
+
+.working {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-size: 12px;
+  color: var(--muted);
+}
+.working::before {
+  content: "";
+  width: 9px; height: 9px;
+  background: var(--ink);
+  animation: tick .9s steps(2) infinite;
+}
+@keyframes tick { 50% { opacity: .2; } }
+
+.hidden { display: none !important; }
+
+/* --- responsive ---------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { position: static; }
+  .finding__row { grid-template-columns: 4.5rem 1fr; row-gap: .2rem; }
+  .finding__id, .state { grid-column: 2; }
+  .finding__body { padding-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+@media print {
+  body { background: #fff; }
+  .instrument, .rail, .filters, .actions { display: none; }
+  .shell { display: block; max-width: none; padding: 0; }
+  .sheet { border: 0; box-shadow: none; }
+}
