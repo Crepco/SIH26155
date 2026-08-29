@@ -37,7 +37,8 @@ Read in this order if you are new to the project.
 | [12 — Execution plan](12-execution-plan.md) | Scope decision, phases, dates, definitions of done. |
 | [13 — Technology stack](13-tech-stack.md) | Every dependency and the constraint that justifies it. |
 | [14 — Risk register](14-risk-register.md) | What can kill this project and what we do about it. |
-| [15 — Demo script](15-demo-script.md) | The rehearsed sequence, beat by beat. |
+| [15 — Demo script](15-demo-script.md) | The rehearsed sequence for the finals, beat by beat. Describes the finished system. |
+| [18 — Internal round runbook](18-internal-round-runbook.md) | How to set up, run and present **the build as it exists today** — with what must not be claimed. |
 | [16 — Validation plan](16-validation-plan.md) | How we produce a real accuracy number instead of a claim. |
 | [17 — Competitive landscape](17-competitive-landscape.md) | Nipper, Batfish, Tufin, AlgoSec, FireMon, RANCID — and where we differ. |
 

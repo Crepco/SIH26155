@@ -3,6 +3,11 @@
 Internal rounds are won on clarity and one memorable moment, not on feature count. Rehearse this
 exact sequence, with a recorded fallback. Live demos die.
 
+> **This script describes the finished system.** It includes live vendor training, the fleet
+> attack-path graph and a Crucible verification run - Phases 2 to 4, none of which are built yet.
+> For presenting the current build, use [18 — Internal round runbook](18-internal-round-runbook.md),
+> which covers only what actually runs.
+
 ## The run of show
 
 | Time | Beat | What happens |
