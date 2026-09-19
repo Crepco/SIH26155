@@ -66,4 +66,5 @@ ALL_DEVICES = (
     "fortios-fw-01",
     "junos-edge-01",
     "routeros-branch-01",
+    "panos-fw-01",
 )

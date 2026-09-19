@@ -1,7 +1,7 @@
 """The whole loop: files in, signed PDF out.
 
 The Phase 1 definition of done, asserted. If this file passes, the baseline
-pipeline works end to end across five vendors - which is the thing that has to
+pipeline works end to end across six vendors - which is the thing that has to
 be true before any differentiator is worth starting.
 """
 
@@ -23,11 +23,11 @@ def _out() -> Path:
 
 
 def test_bulk_audit_produces_a_report_per_device():
-    """Drop in five devices from five vendors, get five signed reports."""
+    """Drop in six devices from six vendors, get six signed reports."""
     output = _out()
     job = run_audit(DEVICES, rules_path=RULES, output_dir=output)
 
-    assert len(job.results) == 5
+    assert len(job.results) == 6
     for result in job.results:
         assert result.artefacts["pdf"], f"{result.device_id}: no PDF"
         assert Path(result.artefacts["pdf"]).stat().st_size > 4000

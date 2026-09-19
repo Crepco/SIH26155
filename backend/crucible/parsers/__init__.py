@@ -23,6 +23,7 @@ from crucible.parsers import (  # noqa: F401  (import for side effect)
     cisco_ios,
     fortios,
     junos,
+    panos,
     routeros,
     show_output,
 )

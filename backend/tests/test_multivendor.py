@@ -26,6 +26,7 @@ def test_every_fixture_is_fingerprinted_to_the_expected_vendor():
         "fortios-fw-01": ("fortinet", "FortiOS"),
         "junos-edge-01": ("juniper", "JUNOS"),
         "routeros-branch-01": ("mikrotik", "RouterOS"),
+        "panos-fw-01": ("paloalto", "PAN-OS"),
     }
     for device, (vendor, os_name) in expected.items():
         identity = parsed(device).identity

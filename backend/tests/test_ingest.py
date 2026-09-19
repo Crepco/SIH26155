@@ -29,13 +29,14 @@ def _tmp() -> Path:
 
 def test_a_directory_of_device_directories_becomes_one_bundle_each():
     bundles = load(DEVICES)
-    assert len(bundles) == 5
+    assert len(bundles) == 6
     assert {b.device_id for b in bundles} == {
         "cisco-ios-core-01",
         "arista-leaf-01",
         "fortios-fw-01",
         "junos-edge-01",
         "routeros-branch-01",
+        "panos-fw-01",
     }
 
 

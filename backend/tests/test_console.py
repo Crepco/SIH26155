@@ -98,7 +98,7 @@ def test_the_sample_fleet_endpoint_returns_a_full_audit():
     )
     payload = client.post("/demo").json()
 
-    assert payload["devices"] == 5
+    assert payload["devices"] == 6
     report = payload["reports"][0]
     assert report["findings"], "the sample fleet is deliberately misconfigured"
     assert report["coverage"]["total_lines"] > 0

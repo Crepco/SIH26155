@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<config version="10.2.0" urldb="paloaltonetworks" detail-version="10.2.4">
+  <mgt-config>
+    <users>
+      <entry name="admin">
+        <phash>$1$qzwsbltr$W1CbE3cvRkpAnuRVY2Pqg/</phash>
+        <permissions>
+          <role-based>
+            <superuser>yes</superuser>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="auditor">
+        <phash>$5$rounds=5000$saltsalt$R4vR7lYo0cTqBvXKmP7u9d4yT0mHn1b2c3d4e5f6g7</phash>
+        <permissions>
+          <role-based>
+            <superreader>yes</superreader>
+          </role-based>
+        </permissions>
+      </entry>
+    </users>
+    <password-complexity>
+      <enabled>yes</enabled>
+      <minimum-length>8</minimum-length>
+    </password-complexity>
+  </mgt-config>
+  <shared>
+    <log-settings>
+      <syslog>
+        <entry name="central-syslog">
+          <server>
+            <entry name="siem-01">
+              <server>10.0.0.5</server>
+              <transport>UDP</transport>
+              <port>514</port>
+            </entry>
+          </server>
+        </entry>
+      </syslog>
+    </log-settings>
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <deviceconfig>
+        <system>
+          <hostname>pa-fw-01</hostname>
+          <ip-address>10.0.0.10</ip-address>
+          <netmask>255.255.255.0</netmask>
+          <default-gateway>10.0.0.1</default-gateway>
+          <login-banner>Authorised access only</login-banner>
+          <service>
+            <disable-telnet>no</disable-telnet>
+            <disable-http>no</disable-http>
+            <disable-https>no</disable-https>
+            <disable-ssh>no</disable-ssh>
+            <disable-snmp>no</disable-snmp>
+          </service>
+          <snmp-setting>
+            <access-setting>
+              <version>
+                <v2c>
+                  <snmp-community-string>public</snmp-community-string>
+                </v2c>
+              </version>
+            </access-setting>
+          </snmp-setting>
+          <ntp-servers>
+            <primary-ntp-server>
+              <ntp-server-address>10.0.0.1</ntp-server-address>
+              <authentication-type>
+                <none/>
+              </authentication-type>
+            </primary-ntp-server>
+          </ntp-servers>
+          <timezone>Asia/Kolkata</timezone>
+        </system>
+        <setting>
+          <management>
+            <idle-timeout>60</idle-timeout>
+          </management>
+        </setting>
+      </deviceconfig>
+      <network>
+        <interface>
+          <ethernet>
+            <entry name="ethernet1/1">
+              <layer3>
+                <ip>
+                  <entry name="203.0.113.2/30"/>
+                </ip>
+                <interface-management-profile>allow-ping</interface-management-profile>
+              </layer3>
+              <comment>uplink to ISP</comment>
+            </entry>
+            <entry name="ethernet1/2">
+              <layer3>
+                <ip>
+                  <entry name="10.0.0.2/24"/>
+                </ip>
+              </layer3>
+              <comment>inside - management and core</comment>
+            </entry>
+          </ethernet>
+        </interface>
+      </network>
+      <vsys>
+        <entry name="vsys1">
+          <zone>
+            <entry name="untrust">
+              <network>
+                <layer3>
+                  <member>ethernet1/1</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="trust">
+              <network>
+                <layer3>
+                  <member>ethernet1/2</member>
+                </layer3>
+              </network>
+            </entry>
+          </zone>
+          <rulebase>
+            <security>
+              <rules>
+                <entry name="allow-outbound">
+                  <from><member>trust</member></from>
+                  <to><member>untrust</member></to>
+                  <source><member>any</member></source>
+                  <destination><member>any</member></destination>
+                  <application><member>any</member></application>
+                  <service><member>application-default</member></service>
+                  <action>allow</action>
+                </entry>
+              </rules>
+            </security>
+          </rulebase>
+        </entry>
+      </vsys>
+    </entry>
+  </devices>
+</config>
