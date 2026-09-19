@@ -1,11 +1,8 @@
 # Frontend
 
-Two things live here. Only one of them ships today.
-
-| Path | What it is | Status |
-|------|-----------|--------|
-| [`public/`](public/) | **The audit console.** Plain HTML, CSS and JavaScript, served by the API at `/`. | **Ships now** |
-| `package.json`, `next.config.mjs`, `tsconfig.json`, `Dockerfile` | Next.js scaffold for the Phase 2 training GUI | Not yet built |
+Everything here is plain HTML, CSS and JavaScript in [`public/`](public/), served by the API at `/`.
+It holds the audit console, the training GUI and the fleet view. There is no build step and no
+`node_modules`; [ADR 0007](../docs/adr/0007-plain-html-console.md) records why.
 
 ## Running it
 
@@ -17,21 +14,16 @@ uvicorn crucible.api.main:app --host 127.0.0.1 --port 8000
 Open <http://127.0.0.1:8000>. There is no install step and no build step, because there is nothing
 to install or build.
 
-## Why plain HTML and not the Next.js app the stack document specifies
-
-The stack document ([docs/13](../docs/13-tech-stack.md)) names Next.js, and that remains the right
-answer for the training GUI, which is a genuinely stateful editing surface. It is the wrong answer
-for the audit console, for one reason:
+## Why plain HTML
 
 **`npm ci` pulls roughly three hundred packages over the network.** The single claim this project
 cannot afford to weaken is that it runs with the cable out. A page with no bundler, no lockfile and
-no third-party code is a page whose offline behaviour can be *checked* rather than asserted — and
-[`backend/tests/test_console.py`](../backend/tests/test_console.py) checks it, on every push, by
+no third-party code is a page whose offline behaviour can be *checked* rather than asserted, and
+[`backend/tests/test_console.py`](../backend/tests/test_console.py) checks it on every push by
 scanning every asset for anything that would make a browser reach off the deployment.
 
 The cost is real and worth naming: no component library, no type checking on the view layer, and
-state handled by hand. At this size that is a good trade. If the training GUI outgrows it, the
-scaffold is still here.
+state handled by hand. At this size that is a good trade.
 
 ## Design
 

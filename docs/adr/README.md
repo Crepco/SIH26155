@@ -11,6 +11,7 @@ point is that a decision made once in August is not re-litigated every week in S
 | [0004](0004-ai-proposes-engine-disposes.md) | The model proposes parsers; the deterministic engine issues verdicts | Accepted |
 | [0005](0005-single-emulation-target.md) | VyOS is the only emulation target | Accepted |
 | [0006](0006-no-permissioned-blockchain.md) | Hash-chained ledger instead of a permissioned blockchain | Accepted |
+| [0007](0007-plain-html-console.md) | The console and training GUI are plain HTML; the Next.js scaffold is retired | Accepted |
 
 ## Format
 

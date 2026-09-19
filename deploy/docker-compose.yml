@@ -71,20 +71,8 @@ services:
     networks: [internal]
     profiles: [graph]
 
-  # The audit console is plain HTML/CSS/JS served by the `api` service at `/`,
-  # so a default deployment has no frontend container at all. This service is
-  # kept behind a profile for the Phase 2 training GUI, which is the one surface
-  # that genuinely warrants a framework.
-  frontend:
-    build:
-      context: ../frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-    depends_on: [api]
-    ports:
-      - "127.0.0.1:3000:3000"
-    networks: [internal]
-    profiles: [nextjs]
+  # There is no frontend container. The audit console and the training GUI are
+  # plain HTML/CSS/JS served by the `api` service at `/` (ADR 0007).
 
 networks:
   internal:

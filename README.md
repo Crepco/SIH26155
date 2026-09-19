@@ -254,7 +254,7 @@ These are guarantees built into the architecture, and the tests enforce them.
 | Path | Contents |
 |------|----------|
 | [backend/](backend/) | Python package `crucible`: ingestion, parsers, IR, policy engine, reports, ledger, CLI and FastAPI service |
-| [frontend/public/](frontend/public/) | The audit console: plain HTML/CSS/JS served by the API, no build step. The Next.js scaffold beside it is for the Phase 2 training GUI |
+| [frontend/public/](frontend/public/) | The audit console: plain HTML/CSS/JS served by the API, no build step ([ADR 0007](docs/adr/0007-plain-html-console.md)) |
 | [rules/](rules/) | Compliance controls as YAML |
 | [schemas/](schemas/) | Versioned JSON Schemas for the IR, rules and adapter packs |
 | [docs/](docs/) | Specifications, execution plan, ADRs. Start at [docs/00-index.md](docs/00-index.md) |
