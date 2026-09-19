@@ -38,6 +38,11 @@ class IRBuilder:
         self._lines: dict[str, dict[int, str]] = {}
         # file -> {line number -> tier that claimed it}
         self._claimed: dict[str, dict[int, int]] = {}
+        # Literals a parser or pack flagged as secret. Scrubbed from every
+        # stored source line at build time, not only from the line that was
+        # cited: a FortiOS community string sits on a "set name" line that no
+        # line-level pattern can recognise without its block.
+        self._secrets: set[str] = set()
 
     # -- line accounting --------------------------------------------------
 
@@ -113,6 +118,7 @@ class IRBuilder:
         parser knows, from block context, that a particular literal on the line
         is sensitive.
         """
+        self._remember(secret)
         raw = redact_literal(self.raw_line(file, line), secret)
         provenance = Provenance(
             file=file,
@@ -156,6 +162,7 @@ class IRBuilder:
             raise TypeError(f"{path} is not a list")
         existing.append(value)
         index = len(existing) - 1
+        self._remember(secret)
         raw = redact_literal(self.raw_line(file, line), secret)
         self._provenance[f"{path}[{index}]"] = Provenance(
             file=file,
@@ -186,6 +193,17 @@ class IRBuilder:
         self._device[key] = value
 
     # -- internals --------------------------------------------------------
+
+    def _remember(self, secret: str | None) -> None:
+        if secret and len(secret.strip("\"'")) >= 2:
+            self._secrets.add(secret.strip("\"'"))
+
+    def _scrub(self, text: str) -> str:
+        cleaned = redact(text)
+        for secret in self._secrets:
+            if secret in cleaned:
+                cleaned = redact_literal(cleaned, secret)
+        return cleaned
 
     def _write(self, path: str, value: Any) -> None:
         parts = split_path(path)
@@ -244,7 +262,7 @@ class IRBuilder:
                     coverage.unparsed_lines += 1
                     if len(coverage.unparsed_sample) < MAX_UNPARSED_SAMPLE:
                         coverage.unparsed_sample.append(
-                            {"file": filename, "line": number, "raw": redact(raw)}
+                            {"file": filename, "line": number, "raw": self._scrub(raw)}
                         )
                 else:
                     coverage.parsed_lines += 1
@@ -261,7 +279,7 @@ class IRBuilder:
             # Redacted at this boundary, once, so that nothing downstream can
             # accidentally surface an unredacted line.
             sources={
-                filename: [redact(lines[n]) for n in sorted(lines)]
+                filename: [self._scrub(lines[n]) for n in sorted(lines)]
                 for filename, lines in self._lines.items()
             },
         )

@@ -107,6 +107,33 @@ def test_no_community_string_is_ever_stored():
             assert secret not in blob, f"{device}: {secret!r} survived redaction into evidence"
 
 
+def test_no_secret_survives_into_the_stored_source_lines():
+    """Regression: the evidence gutter shows *context* lines, not just the cited one.
+
+    Those come from ``ir.sources``, which used line-level patterns only. The
+    RouterOS line ``/snmp community add name=public`` had its verb redacted and
+    its community string left visible, and FortiOS writes the string as
+    ``set name "public"`` where no line pattern can see it.
+    """
+    for device in ALL_DEVICES:
+        blob = "\n".join(line for lines in ir_for(device).sources.values() for line in lines)
+        for secret in ("public", "s3cr3t-rw", "hunter2", "readonly123", "070C285F4D06"):
+            assert secret not in blob, f"{device}: {secret!r} is visible in the source excerpt"
+
+
+def test_community_redaction_skips_verbs_and_modifiers():
+    from crucible.common.redaction import redact
+
+    for line in (
+        "/snmp community add name=public read-access=yes",
+        "snmp-agent community read public",
+        "snmp-server community public RO",
+        "community public authorization read-only;",
+    ):
+        assert "public" not in redact(line), line
+    assert redact("/snmp community add name=public").startswith("/snmp community add ")
+
+
 def test_logging_server_normalises_across_all_five_vendors():
     """Five grammars, one syslog destination, one IR list."""
     for device in ALL_DEVICES:

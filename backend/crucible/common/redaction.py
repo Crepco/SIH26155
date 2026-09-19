@@ -34,8 +34,21 @@ _SECRET_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
     (re.compile(r"(\bpassword\s+)(?!\d\s)(\S+)", re.IGNORECASE), 2),
     # SNMP community strings
     (re.compile(r"(\bsnmp-server\s+community\s+)(\S+)", re.IGNORECASE), 2),
-    (re.compile(r"(\bcommunity\s+)(\S+)", re.IGNORECASE), 2),
+    # "community read public", "community add name=public": the string is the
+    # first token after any verbs and access modifiers, or the name= value.
+    # Redacting the verb instead - which this once did - leaves the community
+    # string in plain sight in the evidence gutter.
+    (re.compile(r"(\bcommunity\b.*?\bname=)(\S+)", re.IGNORECASE), 2),
     (re.compile(r"(\bname=)(\S+)(?=.*\bcommunity)", re.IGNORECASE), 2),
+    (
+        re.compile(
+            r"(\bcommunity\s+(?:(?:add|set|read|write|ro|rw|read-only|read-write|cipher|simple)\s+)*)"
+            r"(?!name=|(?:add|set|read|write|ro|rw|read-only|read-write|cipher|simple)\s)"
+            r"([^\s=]+)(?=\s|$)",
+            re.IGNORECASE,
+        ),
+        2,
+    ),
     # Keys and shared secrets
     (re.compile(r"(\bkey\s+\d\s+)(\S+)", re.IGNORECASE), 2),
     (re.compile(r"(\bpre-shared-key\s+)(\S+)", re.IGNORECASE), 2),
