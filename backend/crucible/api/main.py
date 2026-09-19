@@ -27,6 +27,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from crucible import IR_SCHEMA_VERSION, __version__
+from crucible.api.home import Home
+from crucible.api.learning import register_learning
 from crucible.api.runner import run_audit
 from crucible.common.errors import CrucibleError
 from crucible.ledger.chain import Ledger
@@ -42,10 +44,17 @@ SAMPLE_FLEET = REPO_ROOT / "backend" / "tests" / "fixtures" / "devices"
 DATA_DIR = Path(tempfile.gettempdir()) / "crucible-data"
 
 
-def create_app(rules_path: Path | None = None, data_dir: Path | None = None) -> FastAPI:
+def create_app(
+    rules_path: Path | None = None,
+    data_dir: Path | None = None,
+    home_dir: Path | None = None,
+) -> FastAPI:
     rules = rules_path or DEFAULT_RULES
     data = data_dir or DATA_DIR
     data.mkdir(parents=True, exist_ok=True)
+    # Installed adapter packs and trusted publishers ($CRUCIBLE_HOME). Every
+    # audit this service runs uses them, exactly as the CLI does.
+    home = Home(home_dir)
 
     app = FastAPI(
         title="Crucible",
@@ -125,6 +134,7 @@ def create_app(rules_path: Path | None = None, data_dir: Path | None = None) -> 
                 framework=framework,
                 formats=("json", "md", "pdf"),
                 workdir=workdir,
+                packs=home.packs(),
             )
             payload = job.to_dict()
             payload["artefacts"] = {
@@ -163,6 +173,7 @@ def create_app(rules_path: Path | None = None, data_dir: Path | None = None) -> 
             rules_path=rules,
             output_dir=data / "reports",
             formats=("json", "md", "pdf"),
+            packs=home.packs(),
         )
         payload = job.to_dict()
         payload["artefacts"] = {
@@ -199,6 +210,8 @@ def create_app(rules_path: Path | None = None, data_dir: Path | None = None) -> 
                 for entry in ledger
             ],
         }
+
+    register_learning(app, rules=rules, data=data, home=home)
 
     # The console is served from the deployment, never from a CDN. Mounted last
     # so that an API route always wins over a static path of the same name.
