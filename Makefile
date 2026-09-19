@@ -16,8 +16,7 @@ help: ## Show this help
 # --- development -----------------------------------------------------------
 
 setup: ## Install backend and frontend dependencies for development
-	cd backend && pip install -e ".[dev,ai]"
-	cd frontend && npm ci
+	cd backend && pip install -e ".[dev]"
 
 check: contracts test ## Everything CI runs, locally
 

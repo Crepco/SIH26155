@@ -16,51 +16,31 @@ version = "0.1.0"
 description = "AI-driven multi-vendor network security compliance auditor with air-gapped verification sandbox"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { file = "../LICENSE" }
+license = { text = "MIT" }
 keywords = ["compliance", "network-security", "cis", "stig", "nist", "audit", "air-gapped"]
 
 dependencies = [
-  # --- web and data ------------------------------------------------------
-  "fastapi>=0.115",
-  "uvicorn[standard]>=0.32",
-  "pydantic>=2.9",
-  "sqlalchemy>=2.0",
-  "psycopg[binary]>=3.2",
-  "alembic>=1.14",
-
-  # --- jobs --------------------------------------------------------------
-  "celery>=5.4",
-  "redis>=5.2",
-
-  # --- parsing, Tier 0 ---------------------------------------------------
-  "ciscoconfparse2>=0.7",
-  "textfsm>=1.1",
-  "ntc-templates>=6.0",
-  "lxml>=5.3",
-
-  # --- rules and schemas -------------------------------------------------
+  # Exactly what the code imports. Every entry is pure Python or ships wheels,
+  # so the whole set vendors into the offline bundle (docs/11-air-gap.md).
   "pyyaml>=6.0",
-  "jsonschema>=4.23",
-
-  # --- integrity ---------------------------------------------------------
-  "cryptography>=44.0",
-
-  # --- reporting ---------------------------------------------------------
   "reportlab>=4.2",
-
-  # --- graph -------------------------------------------------------------
-  "networkx>=3.4",
-  "neo4j>=5.26",
+  "cryptography>=44.0",
+  "fastapi>=0.115",
+  "uvicorn>=0.32",
+  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
-# Tiers 1-3. Separated so the deterministic pipeline can be installed and
-# tested without pulling model machinery - which is also how we prove that the
-# verdict path contains no model.
-ai = [
-  "sentence-transformers>=3.3",
-  "chromadb>=0.5",
-  "httpx>=0.28",        # local Ollama on loopback only; egress is blocked in CI
+# Tier 2 talks to a local Ollama over loopback with the standard library, so the
+# model layer needs no Python dependency at all. Ollama itself is a separate,
+# optional install; without it the offline lexical proposer is used.
+
+# Multi-user deployment: bulk audits on a worker pool and a graph store. The
+# single-process build needs none of it.
+scale = [
+  "celery>=5.4",
+  "redis>=5.2",
+  "neo4j>=5.26",
 ]
 
 # Optional live device pull. Stretch goal, deployment story, never the demo.
@@ -70,6 +50,7 @@ live = [
 ]
 
 dev = [
+  "httpx>=0.27",
   "pytest>=8.3",
   "pytest-cov>=6.0",
   "pytest-asyncio>=0.24",
@@ -105,6 +86,16 @@ python_version = "3.11"
 strict = true
 warn_unreachable = true
 plugins = ["pydantic.mypy"]
+
+# ReportLab ships no type information. The PDF renderer is the only module that
+# touches it, so the exemption is scoped to exactly that surface.
+[[tool.mypy.overrides]]
+module = ["reportlab.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["crucible.report.pdf"]
+disallow_subclassing_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
