@@ -100,14 +100,7 @@ async function audit(request) {
     }
     const job = await response.json();
     if (!job.reports || !job.reports.length) throw new Error("no readable configuration in that upload");
-    state.devices = job.reports;
-    state.selected = 0;
-    state.open.clear();
-    $("drop").classList.add("hidden");
-    $("sheet").classList.remove("hidden");
-    renderFleet();
-    renderDevice();
-    loadLedger();
+    showJob(job);
   } catch (e) {
     fail(e.message);
   } finally {
@@ -115,6 +108,37 @@ async function audit(request) {
     document.querySelectorAll(".drop .btn").forEach((b) => (b.disabled = false));
   }
 }
+
+/** Render an audit job. Used by the audit view and by the training view's re-audit. */
+function showJob(job, select = 0) {
+  state.devices = job.reports;
+  state.selected = select;
+  state.open.clear();
+  $("drop").classList.add("hidden");
+  $("sheet").classList.remove("hidden");
+  renderFleet();
+  renderDevice();
+  loadLedger();
+}
+
+/* -- views ---------------------------------------------------------------- */
+
+function switchView(name) {
+  document.querySelectorAll("[data-view-panel]").forEach((panel) =>
+    panel.classList.toggle("hidden", panel.dataset.viewPanel !== name));
+  document.querySelectorAll("#views [data-view]").forEach((tab) =>
+    tab.setAttribute("aria-current", tab.dataset.view === name ? "page" : "false"));
+  window.scrollTo({ top: 0 });
+  document.dispatchEvent(new CustomEvent("crucible:view", { detail: name }));
+}
+
+$("views").addEventListener("click", (e) => {
+  const tab = e.target.closest("[data-view]");
+  if (tab) switchView(tab.dataset.view);
+});
+
+/* Shared with the other views, which live in their own files. */
+window.Crucible = { $, esc, pct, grade, showJob, switchView, loadLedger };
 
 const auditSample = () => audit(() => fetch("/demo", { method: "POST" }));
 
@@ -184,7 +208,10 @@ function renderCoverage(r) {
   bar.parentElement.className = `meter ${grade(value)}`;
 
   const tiers = c.by_tier || {};
-  $("cov-tier").textContent = `tier 0 ${tiers.tier0 || 0} lines`;
+  $("cov-tier").textContent = ["tier0", "tier1", "tier2", "tier3"]
+    .filter((k) => tiers[k])
+    .map((k) => `${k.replace("tier", "tier ")} · ${tiers[k]}`)
+    .join("  ") || "tier 0 · 0";
 
   // The sentence that separates this tool from every other one in the category.
   $("cov-note").innerHTML = c.unparsed_lines
@@ -277,7 +304,8 @@ function body(f) {
       )
       .join("");
     parts.push(`<div class="excerpt">
-      <div class="excerpt__file"><span>${esc(e.file)}</span><span>${esc(e.ir_path)} · tier ${e.tier}</span></div>
+      <div class="excerpt__file"><span>${esc(e.file)}</span><span>${esc(e.ir_path)} · tier ${e.tier}${
+        e.adapter_pack ? ` · pack ${esc(e.adapter_pack)}` : ""}</span></div>
       <div class="excerpt__lines">${lines}</div>
     </div>`);
   }

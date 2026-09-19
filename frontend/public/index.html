@@ -16,13 +16,17 @@
 <header class="instrument">
   <span class="instrument__mark">CRUCIBLE</span>
   <span class="instrument__tagline">compliance you can prove</span>
+  <nav class="views" id="views" aria-label="Views">
+    <button class="views__tab" data-view="audit" aria-current="page">AUDIT</button>
+    <button class="views__tab" data-view="train" aria-current="false">TRAIN</button>
+  </nav>
   <span class="instrument__spacer"></span>
   <span class="instrument__stat" id="stat-rules">rules <b>—</b></span>
   <span class="instrument__stat" id="stat-ledger">ledger <b>—</b></span>
   <span class="lamp" title="No outbound network call in any code path">OFFLINE</span>
 </header>
 
-<main class="shell">
+<main class="shell" data-view-panel="audit">
 
   <!-- ── fleet ─────────────────────────────────────────────────────────── -->
   <nav class="rail" aria-label="Audited devices">
@@ -127,7 +131,8 @@
         <h2 class="section__label"><span>AUDIT LEDGER</span><span id="ledger-state"></span></h2>
         <p class="notice">
           Each entry commits to the hash of the one before it. Altering a finding in any past
-          report breaks its Merkle root, which breaks that entry, which breaks every entry after.
+          report breaks its Merkle root and that entry's signature, and the next entry no longer
+          links to it. Hiding the edit would mean re-signing every later entry with the issuing key.
         </p>
         <ul class="chain" id="chain"></ul>
       </div>
@@ -135,6 +140,86 @@
   </div>
 </main>
 
+<!-- ── training: Tiers 2 and 3 ──────────────────────────────────────────── -->
+<main class="bench hidden" data-view-panel="train" aria-label="Teach a vendor">
+  <p class="error hidden" id="t-error" role="alert"></p>
+
+  <section class="sheet" id="t-start">
+    <div class="section">
+      <h2 class="section__label"><span>TEACH A VENDOR</span><span>tiers 1 · 2 · 3</span></h2>
+      <p class="lede">
+        Feed in a configuration this build cannot read. Tier 1 recovers its structure, Tier 2
+        proposes what each unrecognised line means, and you confirm or correct it. What you
+        confirm becomes a <b>signed adapter pack</b>: the next audit reads the vendor through the
+        normal pipeline, and the rules decide. Nothing here ever decides pass or fail.
+      </p>
+      <div class="actions actions--left">
+        <button class="btn" id="t-sample-vrp">Train the unseen sample · Huawei VRP</button>
+        <button class="btn btn--ghost" id="t-sample-mikrotik">Hold out MikroTik and train it cold</button>
+        <button class="btn btn--ghost" id="t-choose">Choose a file</button>
+      </div>
+      <p class="working hidden" id="t-working">Structuring and proposing…</p>
+      <input type="file" id="t-file" multiple class="hidden">
+    </div>
+  </section>
+
+  <section class="sheet hidden" id="t-session">
+    <div class="sheet__head">
+      <h1 class="sheet__title" id="t-device">—</h1>
+      <p class="sheet__ident" id="t-ident"></p>
+    </div>
+
+    <section class="section">
+      <h2 class="section__label">
+        <span>UNINTERPRETED FAMILIES</span>
+        <span class="filters">
+          <button class="chip" id="t-accept">ACCEPT ALL ≥ 0.85</button>
+        </span>
+      </h2>
+      <p class="notice">
+        Lines that share a shape are grouped, so a family is mapped once. Each carries a Tier-2
+        proposal: a candidate <i>parser</i>, never a verdict. Open one to check it against your own
+        file, correct it, and confirm. Confident proposals may be accepted as they stand and stay
+        marked as model-proposed in the pack.
+      </p>
+      <div class="register" id="t-families"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="section__label"><span>SIGN THE PACK</span><span id="t-confirmed">0 confirmed</span></h2>
+      <div class="form">
+        <label>pack id <input id="t-pack-id" placeholder="huawei-vrp" autocomplete="off"></label>
+        <label>vendor <input id="t-vendor" placeholder="huawei" autocomplete="off"></label>
+        <label>os <input id="t-os" placeholder="VRP" autocomplete="off"></label>
+        <label>your name <input id="t-author" placeholder="admin@org" autocomplete="off"></label>
+      </div>
+      <div class="actions actions--left">
+        <button class="btn" id="t-sign">Sign, install and re-audit</button>
+      </div>
+      <div class="result hidden" id="t-result"></div>
+    </section>
+  </section>
+
+  <section class="sheet" id="t-packs-sheet">
+    <div class="section">
+      <h2 class="section__label"><span>INSTALLED PACKS</span><span id="t-publisher"></span></h2>
+      <p class="notice">
+        A pack is refused unless it is signed by a publisher this deployment trusts. Trusting a
+        publisher is a separate, deliberate step: importing a pack never does it for you.
+      </p>
+      <div id="t-packs"></div>
+      <div class="actions actions--left">
+        <button class="btn btn--ghost" id="t-import">Import a pack</button>
+        <a class="btn btn--ghost" href="/trust/key" download="publisher.pub">Download this deployment's publisher key</a>
+      </div>
+      <div class="result hidden" id="t-import-result"></div>
+      <input type="file" id="t-pack-file" accept=".yaml,.yml" class="hidden">
+      <input type="file" id="t-key-file" accept=".pub,.pem" class="hidden">
+    </div>
+  </section>
+</main>
+
 <script src="/static/app.js"></script>
+<script src="/static/train.js"></script>
 </body>
 </html>
