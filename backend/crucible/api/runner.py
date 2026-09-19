@@ -12,10 +12,12 @@ blueprint of a national network's defences.
 from __future__ import annotations
 
 import datetime as _dt
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from crucible.adapters.pack import AdapterPack
 from crucible.common.canonical import canonical_bytes
 from crucible.ingest.bundle import load
 from crucible.ledger.chain import Ledger
@@ -104,12 +106,18 @@ def run_audit(
     key_path: str | Path | None = None,
     ledger_path: str | Path | None = None,
     workdir: str | Path | None = None,
+    packs: Sequence[AdapterPack] = (),
+    hold_out: Sequence[str] = (),
 ) -> AuditJob:
     """Audit every device under ``target``.
 
     ``framework`` filters the rule set by control-identifier family. It does not
     re-parse anything: one IR, four frameworks, which is the IR paying for
     itself.
+
+    ``packs`` must already be admitted by a trust store (see
+    :func:`crucible.api.home.trusted_packs`). ``hold_out`` switches off the
+    built-in parser for the named vendors.
     """
     ruleset: RuleSet = load_rules(rules_path)
     if framework:
@@ -132,7 +140,7 @@ def run_audit(
         job.ledger_path = str(ledger.path)
 
     for index, bundle in enumerate(bundles, start=1):
-        parsed = build_ir(bundle)
+        parsed = build_ir(bundle, packs=packs, hold_out=hold_out)
         evaluation = evaluate_device(parsed.ir, ruleset)
         report = build_report(
             report_id=_report_id(index, bundle.device_id),
@@ -142,6 +150,7 @@ def run_audit(
             rule_set_digest=ruleset.version_digest,
             frameworks=ruleset.frameworks(),
             parser_applied=parsed.parser_applied,
+            adapter_packs=parsed.pack_ids,
         )
 
         # Commit to the ledger before rendering, so the verification hash the

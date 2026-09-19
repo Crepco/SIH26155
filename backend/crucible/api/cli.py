@@ -5,6 +5,12 @@
     crucible rules --framework CIS
     crucible show corpus/core-sw-01/
 
+    crucible propose unknown-device/            Tier 2 proposals for what was not understood
+    crucible train unknown-device/ --pack-id huawei-vrp --vendor huawei --install
+    crucible pack list | show | export | import | remove | verify
+    crucible trust list | add publisher.pub | remove KEYID | key
+    crucible tier2-eval tests/fixtures/devices/routeros-branch-01
+
 Exit codes are meaningful, because this is a tool that belongs in a pipeline:
 
 ===  ===========================================================
@@ -24,14 +30,22 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from crucible import __version__
 from crucible.common.errors import CrucibleError
 from crucible.common.types import Severity, Verdict
 
+if TYPE_CHECKING:
+    from crucible.api.home import Home
+    from crucible.training.proposer import Proposer
+    from crucible.training.session import TrainingSession
+
 __all__ = ["main"]
 
-DEFAULT_RULES = "rules/cis"
+#: The bundled rule set, found relative to the package so `crucible audit x`
+#: works from any directory, not only from the repository root.
+DEFAULT_RULES = str(Path(__file__).resolve().parents[3] / "rules" / "cis")
 
 # --------------------------------------------------------------------------
 # Presentation helpers. Deliberately plain: this runs on an air-gapped console
@@ -55,6 +69,7 @@ def _cmd_audit(args: argparse.Namespace) -> int:
     from crucible.api.runner import run_audit
 
     formats = tuple(f.strip() for f in args.format.split(",") if f.strip())
+    packs = [] if args.no_packs else _home(args).packs()
 
     job = run_audit(
         args.target,
@@ -64,6 +79,8 @@ def _cmd_audit(args: argparse.Namespace) -> int:
         formats=formats,
         sign=not args.no_sign,
         workdir=args.out,
+        packs=packs,
+        hold_out=args.hold_out or [],
     )
 
     if args.json:
@@ -106,7 +123,12 @@ def _cmd_audit(args: argparse.Namespace) -> int:
             f"  {coverage['unparsed_lines']} uninterpreted"
         )
 
-        if not report.parser_applied:
+        if report.adapter_packs:
+            print(
+                "    NOTE: no built-in parser - read by adapter pack "
+                f"{', '.join(report.adapter_packs)}"
+            )
+        elif not report.parser_applied:
             print("    NOTE: vendor not recognised - no parser applied, all controls UNKNOWN")
 
         shown = 0
@@ -249,6 +271,265 @@ def _cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# Tiers 2 and 3, adapter packs and trust
+# --------------------------------------------------------------------------
+
+
+def _home(args: argparse.Namespace) -> Home:
+    from crucible.api.home import Home
+
+    return Home(getattr(args, "home", None))
+
+
+def _proposer(args: argparse.Namespace) -> Proposer:
+    from crucible.training.proposer import LexicalProposer, default_proposer
+
+    if getattr(args, "ollama", False):
+        proposer = default_proposer(args.ollama_url, args.ollama_model)
+        if proposer.name == "lexical":
+            print("  ollama not reachable on loopback with that model - using the lexical proposer")
+        return proposer
+    return LexicalProposer()
+
+
+def _sessions(args: argparse.Namespace) -> list[TrainingSession]:
+    from crucible.ingest.bundle import load
+    from crucible.training.session import TrainingSession
+
+    packs = [] if args.no_packs else _home(args).packs()
+    return [
+        TrainingSession(bundle, packs=packs, hold_out=args.hold_out or [], proposer=_proposer(args))
+        for bundle in load(args.target)
+    ]
+
+
+def _cmd_propose(args: argparse.Namespace) -> int:
+    from crucible.training.session import families_text
+
+    for session in _sessions(args):
+        summary = session.summary()
+        if args.json:
+            print(json.dumps(summary, indent=2, sort_keys=True, default=str))
+            continue
+        coverage = summary["coverage"]
+        print()
+        print(
+            f"  {summary['device_id']}   vendor {summary['vendor']}   "
+            f"proposer {summary['proposer']}"
+        )
+        print(
+            f"  parsed {coverage['parsed']}/{coverage['total']} lines   "
+            f"{len(session.families)} uninterpreted families"
+        )
+        print()
+        print(families_text(session.families))
+        print()
+    return 0
+
+
+def _cmd_train(args: argparse.Namespace) -> int:
+    """Non-interactive training: accept confident proposals, sign, export.
+
+    The interactive version - where an administrator confirms and corrects
+    each family - is the training view in the console. This command is for
+    scripting and for a reproducible demonstration.
+    """
+    sessions = _sessions(args)
+    if len(sessions) != 1:
+        print("crucible: train one device at a time", file=sys.stderr)
+        return 2
+    session = sessions[0]
+    accepted = session.accept_proposals(args.accept_above)
+    if not accepted:
+        print(f"  no proposal reached {args.accept_above:.2f}; train this one in the console")
+        return 2
+    home = _home(args)
+    pack = session.build_pack(
+        pack_id=args.pack_id,
+        vendor=args.vendor,
+        os=args.os,
+        author=args.author,
+        key=home.publisher_key(),
+    )
+    print()
+    print(f"  pack {pack.id}   vendor {pack.vendor}   {len(pack.mappings)} mapping(s)")
+    for mapping in pack.mappings:
+        print(f"    {mapping.ir_path:32} {mapping.transform:17} {mapping.match}")
+    if args.out:
+        Path(args.out).write_text(pack.to_yaml(), encoding="utf-8")
+        print(f"  written   {args.out}")
+    if args.install:
+        print(f"  installed {home.install(pack, replace=True)}")
+    after = session.audit_with(pack)
+    before = session.device.ir.coverage
+    print(
+        f"  coverage  {before.parsed_lines}/{before.total_lines} -> "
+        f"{after.ir.coverage.parsed_lines}/{after.ir.coverage.total_lines} lines"
+    )
+    print()
+    return 0
+
+
+def _cmd_pack(args: argparse.Namespace) -> int:
+    from crucible.adapters.pack import export_ready, load_pack
+
+    home = _home(args)
+    if args.action == "list":
+        packs = home.packs()
+        if not packs:
+            print(f"  no packs installed in {home.packs_dir}")
+        for pack in packs:
+            signer = (pack.signature or {}).get("key_id", "?")
+            print(
+                f"  {pack.id:28} {pack.vendor:12} {len(pack.mappings):3} mappings   "
+                f"signed by {signer}   digest {pack.digest}"
+            )
+        return 0
+    if not args.name:
+        print("crucible: name a pack (or a file, for import and verify)", file=sys.stderr)
+        return 2
+    if args.action in ("show", "export"):
+        text = export_ready(home.get(args.name))
+        if args.out:
+            Path(args.out).write_text(text, encoding="utf-8")
+            print(f"  written {args.out}")
+        else:
+            print(text)
+        return 0
+    if args.action == "import":
+        pack = load_pack(Path(args.name))
+        target = home.install(pack)
+        signer = (pack.signature or {}).get("key_id", "?")
+        print(f"  imported {pack.id} from publisher {signer}")
+        print(f"  installed {target}")
+        return 0
+    if args.action == "remove":
+        print("  removed" if home.remove(args.name) else "  no such pack")
+        return 0
+    if args.action == "verify":
+        pack = load_pack(Path(args.name))
+        key_id = home.trust.admit(pack)
+        print(f"  {pack.id}: signature valid, publisher {key_id} is trusted")
+        return 0
+    return 2
+
+
+def _cmd_trust(args: argparse.Namespace) -> int:
+    home = _home(args)
+    if args.action == "key":
+        sys.stdout.write(home.public_pem().decode("ascii"))
+        return 0
+    if args.action == "list":
+        own = home.publisher_key().key_id
+        for key_id in sorted(home.trust.keys()):
+            print(f"  {key_id}{'   (this deployment)' if key_id == own else ''}")
+        return 0
+    if not args.value:
+        print("crucible: add takes a public key file, remove takes a key id", file=sys.stderr)
+        return 2
+    if args.action == "add":
+        key_id = home.trust.add(Path(args.value).read_bytes())
+        print(f"  now trusting publisher {key_id}")
+        return 0
+    if args.action == "remove":
+        print("  removed" if home.trust.remove(args.value) else "  no such key")
+        return 0
+    return 2
+
+
+def _cmd_tier2_eval(args: argparse.Namespace) -> int:
+    from crucible.ingest.bundle import load
+    from crucible.training.evaluate import evaluate_held_out
+
+    for bundle in load(args.target):
+        report = evaluate_held_out(bundle, proposer=_proposer(args), threshold=args.threshold)
+        if args.json:
+            print(json.dumps(report.to_dict(), indent=2))
+            continue
+        print()
+        print(report.text())
+        print()
+        for row in report.rows:
+            if not (row["expected"] or row["proposed"]):
+                continue
+            if row["field_ok"]:
+                mark = "ok"
+            elif row["expected"]:
+                mark = "XX"
+            else:
+                mark = "--"
+            print(
+                f"    {mark}  {row['line']:4}  {row['text'][:52]:52}  "
+                f"{row['proposed'] or '-':28} {row['confidence'] or ''}"
+            )
+        print()
+    return 0
+
+
+def _add_learning_options(command: argparse.ArgumentParser) -> None:
+    command.add_argument(
+        "--hold-out",
+        action="append",
+        metavar="VENDOR",
+        help="switch off a vendor's built-in parser (the unseen-vendor demonstration)",
+    )
+    command.add_argument("--no-packs", action="store_true", help="ignore installed adapter packs")
+    command.add_argument("--home", help="deployment state directory (default $CRUCIBLE_HOME)")
+
+
+def _add_model_options(command: argparse.ArgumentParser) -> None:
+    command.add_argument(
+        "--ollama", action="store_true", help="use a local Ollama model when reachable"
+    )
+    command.add_argument("--ollama-url", default="http://127.0.0.1:11434")
+    command.add_argument("--ollama-model", default="qwen2.5-coder:7b-instruct-q4_K_M")
+
+
+def _register_learning(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    propose = sub.add_parser("propose", help="Tier-2 proposals for the lines nobody understood")
+    propose.add_argument("target")
+    propose.add_argument("--json", action="store_true")
+    _add_learning_options(propose)
+    _add_model_options(propose)
+    propose.set_defaults(func=_cmd_propose)
+
+    train = sub.add_parser("train", help="build and sign an adapter pack from confident proposals")
+    train.add_argument("target")
+    train.add_argument("--pack-id", required=True)
+    train.add_argument("--vendor", required=True)
+    train.add_argument("--os")
+    train.add_argument("--author")
+    train.add_argument("--accept-above", type=float, default=0.85)
+    train.add_argument("--out", help="write the signed pack here")
+    train.add_argument("--install", action="store_true", help="install it in this deployment")
+    _add_learning_options(train)
+    _add_model_options(train)
+    train.set_defaults(func=_cmd_train)
+
+    pack = sub.add_parser("pack", help="manage installed adapter packs")
+    pack.add_argument("action", choices=["list", "show", "export", "import", "remove", "verify"])
+    pack.add_argument("name", nargs="?", help="pack id, or a file for import and verify")
+    pack.add_argument("--out")
+    pack.add_argument("--home")
+    pack.set_defaults(func=_cmd_pack)
+
+    trust = sub.add_parser("trust", help="manage trusted pack publishers")
+    trust.add_argument("action", choices=["list", "add", "remove", "key"])
+    trust.add_argument("value", nargs="?", help="public key file for add, key id for remove")
+    trust.add_argument("--home")
+    trust.set_defaults(func=_cmd_trust)
+
+    tier2 = sub.add_parser(
+        "tier2-eval", help="measure Tier 2 on a vendor with its built-in parser held out"
+    )
+    tier2.add_argument("target")
+    tier2.add_argument("--threshold", type=float, default=0.85)
+    tier2.add_argument("--json", action="store_true")
+    _add_model_options(tier2)
+    tier2.set_defaults(func=_cmd_tier2_eval)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="crucible",
@@ -268,6 +549,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--no-sign", action="store_true", help="skip ledger commit and signing")
     audit.add_argument("--all", action="store_true", help="list findings of every severity")
     audit.add_argument("--json", action="store_true", help="emit machine-readable output")
+    _add_learning_options(audit)
     audit.set_defaults(func=_cmd_audit)
 
     verify = sub.add_parser("verify", help="verify an audit ledger has not been altered")
@@ -284,6 +566,8 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument("target")
     show.add_argument("--json", action="store_true")
     show.set_defaults(func=_cmd_show)
+
+    _register_learning(sub)
 
     return parser
 

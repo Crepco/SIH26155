@@ -86,7 +86,12 @@ def render_markdown(report: AuditReport) -> str:
         f"{coverage['unparsed_lines']:,} lines uninterpreted** - listed in Appendix C."
     )
     add("")
-    if not report.parser_applied:
+    if report.adapter_packs:
+        add("> No built-in parser exists for this vendor. It was read by the signed adapter pack")
+        add(f"> {', '.join(report.adapter_packs)}; facts learned that way are marked tier 2 or 3")
+        add("> in the evidence, and the pack id is committed to the ledger with them.")
+        add("")
+    elif not report.parser_applied:
         add("> No deterministic parser was applied to this device: the vendor could not be")
         add("> identified with enough confidence. Every control below is therefore UNKNOWN")
         add("> rather than passing by default.")

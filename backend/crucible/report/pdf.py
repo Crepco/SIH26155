@@ -261,7 +261,17 @@ def render_pdf(report: AuditReport, path: str | Path) -> Path:
         )
     )
     story.append(Spacer(1, 3))
-    if not report.parser_applied:
+    if report.adapter_packs:
+        story.append(
+            Paragraph(
+                "<b>No built-in parser exists for this vendor.</b> It was read by the signed "
+                f"adapter pack <b>{', '.join(report.adapter_packs)}</b>. Facts learned that way "
+                "are marked tier 2 (model-proposed) or tier 3 (administrator-confirmed) in the "
+                "evidence below, and the pack id is committed to the ledger with them.",
+                style["body"],
+            )
+        )
+    elif not report.parser_applied:
         story.append(
             Paragraph(
                 "<b>No deterministic parser was applied to this device.</b> The vendor could not "

@@ -41,6 +41,8 @@ class AuditReport:
     rule_set_digest: str
     frameworks: list[str]
     parser_applied: bool
+    #: Signed adapter packs whose knowledge produced facts in this report.
+    adapter_packs: list[str] = field(default_factory=list)
     leaves: list[str] = field(default_factory=list)
     merkle_root: str = ""
     #: Filled in once the report is committed to the ledger.
@@ -98,6 +100,7 @@ class AuditReport:
             "offline": self.offline,
             "device": self.device,
             "parser_applied": self.parser_applied,
+            "adapter_packs": self.adapter_packs,
             "coverage": self.coverage,
             "summary": {
                 "score": self.score,
@@ -164,6 +167,7 @@ def build_report(
     rule_set_digest: str,
     frameworks: list[str],
     parser_applied: bool = True,
+    adapter_packs: list[str] | None = None,
 ) -> AuditReport:
     """Assemble a report and compute its Merkle root."""
     plan = build_plan(evaluation.findings)
@@ -180,6 +184,7 @@ def build_report(
         rule_set_digest=rule_set_digest,
         frameworks=frameworks,
         parser_applied=parser_applied,
+        adapter_packs=list(adapter_packs or []),
         leaves=leaves,
         merkle_root=merkle_root(leaves),
     )

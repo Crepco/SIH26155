@@ -153,6 +153,10 @@ class Evidence:
     raw: str
     tier: int
     context: tuple[tuple[int, str, bool], ...] = ()
+    #: The adapter pack that produced the fact, when one did. Committed to in
+    #: the ledger leaf, so a report can be traced to the learned knowledge
+    #: behind it and a compromised pack audited backwards (docs/06).
+    adapter_pack: str | None = None
 
     @classmethod
     def from_provenance(
@@ -168,6 +172,7 @@ class Evidence:
             raw=prov.raw,
             tier=prov.tier,
             context=context,
+            adapter_pack=prov.adapter_pack,
         )
 
     def cite(self) -> str:
@@ -180,6 +185,7 @@ class Evidence:
             "line": self.line,
             "raw": self.raw,
             "tier": self.tier,
+            "adapter_pack": self.adapter_pack,
             "context": [{"line": n, "text": t, "cited": c} for n, t, c in self.context],
         }
 

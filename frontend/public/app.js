@@ -198,7 +198,11 @@ function renderCoverage(r) {
     jump.onclick = () => $("unparsed-section").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  if (!r.parser_applied) {
+  if (r.adapter_packs && r.adapter_packs.length) {
+    $("cov-note").innerHTML =
+      `<b>No built-in parser for this vendor.</b> Read by the signed adapter pack
+       <b>${esc(r.adapter_packs.join(", "))}</b>. Learned facts are marked tier 2 or 3 in the evidence.`;
+  } else if (!r.parser_applied) {
     $("cov-note").innerHTML =
       `<b>No parser was applied.</b> The vendor could not be identified with enough confidence,
        so every control below is UNKNOWN rather than passing by default.`;
