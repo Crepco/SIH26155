@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crucible: Architecture (SIH26155)</title>
+<!--
+  Source of docs/submission/Crucible-Architecture.pdf. Two A4 pages, no external
+  assets, system fonts only, so it renders the same with the network off.
+  Rebuild (Windows):
+    & "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new
+      --disable-gpu --no-pdf-header-footer
+      --print-to-pdf=docs\submission\Crucible-Architecture.pdf docs\submission\architecture.html
+  Keep it in step with ARCHITECTURE.md beside it.
+-->
+<style>
+  @page { size: A4; margin: 10mm 11mm 9mm; }
+
+  :root {
+    --paper: #ffffff;
+    --ink:   #0e1a24;
+    --rule:  #c3cdd5;
+    --tint:  #eef2f4;
+    --muted: #5c6c7a;
+    --fail:  #a8302a;
+    --pass:  #1b6a47;
+    --mono: "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", ui-monospace, monospace;
+    --serif: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: var(--serif);
+    font-size: 9.1pt;
+    line-height: 1.36;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page { break-after: page; }
+  .page:last-child { break-after: auto; }
+
+  /* ---- masthead ---------------------------------------------------- */
+  .mast {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid var(--ink); padding-bottom: 2.2mm; margin-bottom: 2.6mm;
+  }
+  .mast h1 {
+    font-family: var(--mono); font-size: 19pt; letter-spacing: .14em; margin: 0; line-height: 1;
+  }
+  .mast .tag { font-family: var(--serif); font-style: italic; font-size: 10.5pt; margin-top: 1.2mm; }
+  .mast .meta {
+    font-family: var(--mono); font-size: 7pt; text-align: right; color: var(--muted);
+    line-height: 1.45; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .mast .meta b { color: var(--ink); }
+  .runhead {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 7pt; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .05em; border-bottom: 1px solid var(--ink); padding-bottom: 1.2mm; margin-bottom: 2.6mm;
+  }
+
+  /* ---- sections ---------------------------------------------------- */
+  h2 {
+    font-family: var(--mono); font-size: 7.8pt; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; margin: 3.2mm 0 1.3mm; padding-bottom: .6mm;
+    border-bottom: 1px solid var(--rule);
+  }
+  h2 .n { color: var(--muted); margin-right: 1.6mm; }
+  p { margin: 0 0 1.5mm; }
+  .lede { font-size: 9.6pt; }
+  code, .m { font-family: var(--mono); font-size: 7.6pt; white-space: nowrap; }
+  em { font-style: italic; }
+  strong { font-weight: 700; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6mm; }
+  .cols > div > h2:first-child { margin-top: 1.2mm; }
+
+  .callout {
+    border-left: 2.5px solid var(--ink); background: var(--tint);
+    padding: 1.6mm 2.6mm; margin: 1.8mm 0;
+  }
+  .callout .m { font-size: 7.2pt; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+  /* ---- tables ------------------------------------------------------ */
+  table { width: 100%; border-collapse: collapse; margin: .8mm 0 1.6mm; }
+  th {
+    font-family: var(--mono); font-size: 6.8pt; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; text-align: left; color: var(--muted);
+    border-bottom: 1px solid var(--ink); padding: .8mm 1.6mm .8mm 0;
+  }
+  td { vertical-align: top; padding: 1mm 1.6mm 1mm 0; border-bottom: 1px solid var(--rule); }
+  td.k { font-family: var(--mono); font-size: 7.4pt; font-weight: 700; }
+  td.w code { white-space: normal; font-size: 7.2pt; }
+  td.num { font-family: var(--mono); font-weight: 700; width: 5mm; }
+
+  .st {
+    font-family: var(--mono); font-size: 6.6pt; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; white-space: nowrap; padding: .15mm 1.1mm; border: 1px solid;
+  }
+  .st.built { color: var(--pass); border-color: var(--pass); }
+  .st.part  { color: var(--ink); border-color: var(--ink); }
+  .st.spec  { color: var(--muted); border-color: var(--muted); border-style: dashed; }
+
+  /* ---- figure ------------------------------------------------------ */
+  figure { margin: 1.2mm 0 1mm; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption {
+    font-family: var(--mono); font-size: 6.8pt; color: var(--muted); margin-top: 1mm;
+    display: flex; justify-content: space-between; gap: 4mm;
+  }
+  svg text { font-family: var(--mono); fill: var(--ink); }
+  svg .t  { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; }
+  svg .s  { font-size: 9.2px; }
+  svg .x  { font-size: 8.4px; fill: var(--muted); }
+  svg .ph { font-size: 8px; font-weight: 700; fill: var(--muted); letter-spacing: .05em; }
+  svg .ok { font-size: 8px; font-weight: 700; fill: var(--pass); letter-spacing: .05em; }
+  svg .built { fill: #fff; stroke: var(--ink); stroke-width: 1.4; }
+  svg .pivot { fill: var(--tint); stroke: var(--ink); stroke-width: 2.6; }
+  svg .spec  { fill: #fff; stroke: var(--muted); stroke-width: 1.1; stroke-dasharray: 4 3; }
+  svg .frame { fill: none; stroke: var(--rule); stroke-width: 1; }
+  svg .ar    { stroke: var(--ink); stroke-width: 1.3; fill: none; marker-end: url(#h); }
+  svg .ar.d  { stroke: var(--muted); stroke-dasharray: 3 2.5; marker-end: url(#hm); }
+
+  /* ---- ledger chain ------------------------------------------------ */
+  .chain {
+    font-family: var(--mono); font-size: 7.2pt; line-height: 1.5; background: var(--tint);
+    padding: 1.5mm 2.4mm; margin: 1.2mm 0 1.6mm; white-space: pre;
+  }
+
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 1mm 0 1.4mm;
+           border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+  .facts div { padding: 1.4mm 2mm; border-right: 1px solid var(--rule); }
+  .facts div:last-child { border-right: 0; }
+  .facts b { display: block; font-family: var(--mono); font-size: 12.5pt; line-height: 1.1; }
+  .facts span { font-family: var(--mono); font-size: 6.6pt; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+  .road { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 1mm; }
+  .road div { border-top: 3px solid var(--ink); padding: 1.2mm 1.6mm 0 0; font-size: 8pt; }
+  .road div.next { border-top: 3px dashed var(--muted); }
+  .road .m { display: block; font-weight: 700; font-size: 7pt; text-transform: uppercase; letter-spacing: .05em; }
+
+  .foot {
+    margin-top: 2.2mm; padding-top: 1.2mm; border-top: 1px solid var(--ink);
+    font-family: var(--mono); font-size: 6.8pt; color: var(--muted);
+    display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ PAGE 1 -->
+<section class="page">
+
+  <header class="mast">
+    <div>
+      <h1>CRUCIBLE</h1>
+      <div class="tag">Compliance you can prove. Architecture document.</div>
+    </div>
+    <div class="meta">
+      Smart India Hackathon 2026 · <b>SIH26155</b><br>
+      National Technical Research Organisation<br>
+      Blockchain &amp; Cybersecurity · Software
+    </div>
+  </header>
+
+  <p class="lede">
+    <strong>The problem.</strong> A single government network runs firewalls, routers and switches from
+    dozens of vendors, and every device must comply with CIS, NIST SP&nbsp;800-53, DISA STIG and
+    ISO/IEC&nbsp;27001. Auditors either work a three-hundred-item checklist by hand or buy a suite locked to
+    one vendor. NTRO asked for a vendor-agnostic engine that an administrator can teach new vendors
+    <em>without redeploying code</em>. For a customer like NCIIPC it must also never send a configuration
+    off the machine.
+  </p>
+
+  <div class="callout">
+    <span class="m">The pivot</span><br>
+    Everything turns on one <strong>vendor-neutral intermediate representation</strong> (IR), an LLVM IR for
+    network security posture. Parsers write into it. Rules, reports, remediation, graph analysis and the
+    verification sandbox read <em>only</em> from it. Adding a vendor never touches a rule; adding a
+    framework never touches a parser. That one property satisfies the <em>no manual code modification</em>
+    requirement, and it is enforced by an import-contract check, not by convention.
+  </div>
+
+  <h2><span class="n">01</span>Pipeline</h2>
+  <figure>
+    <svg viewBox="0 0 760 244" role="img" aria-label="Crucible pipeline: ingestion, parsing cascade, IR, policy engine, fleet graph, reporting and ledger, Crucible sandbox">
+      <defs>
+        <marker id="h" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#0e1a24"/>
+        </marker>
+        <marker id="hm" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#5c6c7a"/>
+        </marker>
+      </defs>
+
+      <!-- 1 ingest -->
+      <rect class="built" x="2" y="72" width="118" height="100"/>
+      <text class="t" x="10" y="90">1 INGEST +</text>
+      <text class="t" x="10" y="103">FINGERPRINT</text>
+      <text class="s" x="10" y="121">files · bulk · zip</text>
+      <text class="s" x="10" y="134">device bundles</text>
+      <text class="s" x="10" y="147">vendor · OS · serial</text>
+      <text class="ok" x="10" y="164">BUILT</text>
+
+      <path class="ar" d="M120,122 H140"/>
+
+      <!-- 2 cascade -->
+      <rect class="frame" x="142" y="4" width="170" height="236"/>
+      <text class="t" x="150" y="20">2 PARSING CASCADE</text>
+
+      <rect class="built" x="150" y="28" width="154" height="44"/>
+      <text class="s" x="157" y="43"><tspan font-weight="700">T0</tspan> deterministic parser</text>
+      <text class="x" x="157" y="56">IOS EOS FortiOS Junos ROS</text>
+      <text class="ok" x="157" y="67">BUILT</text>
+
+      <rect class="spec" x="150" y="82" width="154" height="34"/>
+      <text class="s" x="157" y="97"><tspan font-weight="700">T1</tspan> structural inference</text>
+      <text class="ph" x="157" y="109">PHASE 2</text>
+
+      <rect class="spec" x="150" y="126" width="154" height="46"/>
+      <text class="s" x="157" y="141"><tspan font-weight="700">T2</tspan> local LLM <tspan font-weight="700">proposes</tspan></text>
+      <text class="x" x="157" y="153">a mapping, never a verdict</text>
+      <text class="ph" x="157" y="165">PHASE 2</text>
+
+      <rect class="spec" x="150" y="182" width="154" height="50"/>
+      <text class="s" x="157" y="197"><tspan font-weight="700">T3</tspan> admin confirms in GUI</text>
+      <text class="x" x="157" y="209">→ signed Vendor Adapter Pack</text>
+      <text class="ph" x="157" y="222">PHASE 2</text>
+
+      <path class="ar d" d="M227,72 V80"/>
+      <path class="ar d" d="M227,116 V124"/>
+      <path class="ar d" d="M227,172 V180"/>
+
+      <path class="ar" d="M312,122 H332"/>
+
+      <!-- 3 IR -->
+      <rect class="pivot" x="334" y="52" width="112" height="140"/>
+      <text class="ph" x="342" y="68">THE PIVOT</text>
+      <text class="t" x="342" y="86">3 IR</text>
+      <text class="s" x="342" y="104">vendor-neutral</text>
+      <text class="s" x="342" y="117">JSON, schema</text>
+      <text class="s" x="342" y="130">v1.0.0 (frozen)</text>
+      <text class="x" x="342" y="148">every fact cites</text>
+      <text class="x" x="342" y="160">file + line</text>
+      <text class="x" x="342" y="172">coverage counted</text>
+      <text class="ok" x="342" y="185">BUILT</text>
+
+      <path class="ar"   d="M446,95 H470"/>
+      <path class="ar d" d="M446,160 C458,160 458,180 470,180"/>
+
+      <!-- 4 policy -->
+      <rect class="built" x="472" y="28" width="126" height="104"/>
+      <text class="t" x="480" y="45">4 POLICY ENGINE</text>
+      <text class="s" x="480" y="63">rules as YAML</text>
+      <text class="s" x="480" y="76">CIS · NIST · STIG</text>
+      <text class="x" x="480" y="93">PASS / FAIL /</text>
+      <text class="x" x="480" y="105">UNKNOWN (3-valued)</text>
+      <text class="ok" x="480" y="124">BUILT</text>
+
+      <!-- 5 fleet graph -->
+      <rect class="spec" x="472" y="148" width="126" height="84"/>
+      <text class="t" x="480" y="165">5 FLEET GRAPH</text>
+      <text class="s" x="480" y="183">cross-device</text>
+      <text class="s" x="480" y="196">attack paths</text>
+      <text class="ph" x="480" y="222">PHASE 3</text>
+
+      <path class="ar"   d="M598,80 H620"/>
+      <path class="ar d" d="M598,190 C610,190 610,110 620,110"/>
+
+      <!-- 6 reporting -->
+      <rect class="built" x="622" y="28" width="136" height="104"/>
+      <text class="t" x="630" y="45">6 REPORT + LEDGER</text>
+      <text class="s" x="630" y="63">PDF · JSON · MD</text>
+      <text class="s" x="630" y="76">line-cited evidence</text>
+      <text class="x" x="630" y="93">Merkle → hash chain</text>
+      <text class="x" x="630" y="105">→ Ed25519 signature</text>
+      <text class="ok" x="630" y="124">BUILT</text>
+
+      <path class="ar d" d="M690,132 V146"/>
+
+      <!-- 7 crucible -->
+      <rect class="spec" x="622" y="148" width="136" height="84"/>
+      <text class="t" x="630" y="165">7 CRUCIBLE</text>
+      <text class="s" x="630" y="183">IR → VyOS twin</text>
+      <text class="s" x="630" y="196">demonstrate → fix</text>
+      <text class="s" x="630" y="209">→ re-test</text>
+      <text class="ph" x="630" y="226">PHASE 4</text>
+    </svg>
+    <figcaption>
+      <span>Solid = built and tested today · dashed = specified, with its phase</span>
+      <span>Unparsed lines fall down the cascade; nothing below stage 3 ever reads raw config text</span>
+    </figcaption>
+  </figure>
+
+  <h2><span class="n">02</span>The five invariants: guarantees, each enforced by tests</h2>
+  <table>
+    <tr><th></th><th style="width:38%">Invariant</th><th>Consequence</th></tr>
+    <tr><td class="num">1</td><td><strong>The AI never decides pass or fail.</strong> It only writes parsers.</td>
+        <td>Model output is a candidate extraction rule, applied deterministically; the verdict comes from the YAML engine. <em>The AI proposes, the engine decides.</em></td></tr>
+    <tr><td class="num">2</td><td><strong>Every finding carries line-level evidence.</strong></td>
+        <td>File, line number and raw text. This answers <em>“how do I know the AI didn’t invent this?”</em> structurally: the IR builder refuses a fact without a source line.</td></tr>
+    <tr><td class="num">3</td><td><strong>Fail closed.</strong> Unparsed input can never produce a pass.</td>
+        <td>A missing fact evaluates to UNKNOWN under Kleene three-valued logic, and UNKNOWN can never become PASS.</td></tr>
+    <tr><td class="num">4</td><td><strong>Coverage is published, not hidden.</strong></td>
+        <td>Every report states <code>parsed 163 of 164 lines (99.4%)</code> and lists each uninterpreted line verbatim. <code>parsed + unparsed == total</code> is asserted.</td></tr>
+    <tr><td class="num">5</td><td><strong>Three honest states, never two.</strong></td>
+        <td><span class="m">DEMONSTRATED</span> (proven on a twin) · <span class="m">ASSERTED</span> (rule matched) · <span class="m">UNKNOWN</span> (could not determine). No certainty is claimed that was not earned.</td></tr>
+  </table>
+
+  <div class="cols">
+    <div>
+      <h2><span class="n">03</span>Why an IR, and not a prompt</h2>
+      <p>The obvious approach pastes a whole config into an LLM and asks for a verdict. That fails
+      every property an audit needs: it is not reproducible, it cannot cite a line, it fails open
+      when it misreads, and it sends the network’s blueprint to someone else’s server.</p>
+      <p>With an IR, the model’s job shrinks to the one thing it is good at and the one place a
+      mistake is caught: proposing how to <em>read</em> a line nobody recognised. Because context limits only
+      ever apply to single unresolved lines, a 40,000-line config costs nothing extra.</p>
+    </div>
+    <div>
+      <h2><span class="n">04</span>Air-gapped by construction</h2>
+      <p>A device configuration maps every ACL, trust relationship and credential hash. For
+      NCIIPC, a cloud LLM API is a hard disqualifier, whatever the preference. The system makes <strong>zero outbound
+      calls</strong>. The console ships no web fonts or CDN assets, and a test fails the build if any
+      asset reaches off the host. The planned AI tiers run a local quantised model via Ollama with
+      local embeddings (ADR 0003). The current build needs no model at all.</p>
+    </div>
+  </div>
+
+  <div class="foot"><span>Crucible · SIH26155 · architecture</span><span>1 / 2</span></div>
+</section>
+
+<!-- ================================================================ PAGE 2 -->
+<section class="page">
+
+  <div class="runhead"><span>Crucible · architecture</span><span>SIH26155 · NTRO</span></div>
+
+  <h2 style="margin-top:0"><span class="n">05</span>Mapping to the five NTRO components</h2>
+  <table>
+    <tr><th style="width:15%">Component</th><th style="width:15%">Where it lives</th><th>What it does</th><th style="width:11%">Status</th></tr>
+    <tr><td class="k">1 Unified ingestion</td><td class="w"><code>ingest/ fingerprint/</code> console, <code>POST /audit</code></td>
+        <td>Single or bulk upload, directories, zip archives and device bundles (config plus <code>show version</code> read as one device). Refuses path traversal, symlinks and zip bombs. Weighted fingerprinting of six vendors with a published confidence.</td>
+        <td><span class="st built">Built</span></td></tr>
+    <tr><td class="k">2 AI training module</td><td class="w"><code>training/ adapters/</code> Next.js GUI</td>
+        <td>Tiers 1–3: infer structure, a local model proposes a field mapping, and the admin confirms in a low-code GUI. The result is exported as a <strong>signed, portable Vendor Adapter Pack</strong>, so one organisation teaches a vendor and every deployment can audit it next morning with no code shipped. Every uninterpreted line is already surfaced verbatim today; that list is the GUI’s input.</td>
+        <td><span class="st spec">Phase 2</span></td></tr>
+    <tr><td class="k">3 Multi-framework engine</td><td class="w"><code>policy/ rules/*.yaml</code></td>
+        <td>A control is data: an assertion over IR paths, a rationale, framework IDs and per-vendor fixes. Each of the 13 controls maps to CIS v8, NIST SP 800-53 and a DISA STIG ID, and <code>--framework</code> selects without re-parsing. ISO 27001 rules and an XCCDF importer (full STIG) come next.</td>
+        <td><span class="st part">CIS NIST STIG</span></td></tr>
+    <tr><td class="k">4 Reporting &amp; PDF</td><td class="w"><code>report/ ledger/</code></td>
+        <td>A per-device PDF with identity (vendor, model, OS, <strong>serial</strong>), pass/fail by severity, line-cited evidence, vendor-specific remediation CLI, a what-if score, a coverage appendix, and a verification hash on every page.</td>
+        <td><span class="st built">Built</span></td></tr>
+    <tr><td class="k">5 Vendor-agnostic scale</td><td class="w"><code>schemas/ir</code> parser registry</td>
+        <td>A frozen, versioned IR schema. New rules and frameworks need no code. A new vendor is one registered Tier-0 module today, and an imported adapter pack with no code once Phase 2 lands.</td>
+        <td><span class="st part">Foundation</span></td></tr>
+  </table>
+
+  <div class="cols">
+    <div>
+      <h2><span class="n">06</span>Parsing cascade: the AI proposes, the engine decides</h2>
+      <p><strong>Tier 0</strong>: deterministic parsers record provenance for every fact and account for
+      every line. Unclaimed lines fall to <strong>Tier 1</strong>, which detects the grammar (brace, indent,
+      flat) and builds a generic tree. Unknown nodes reach <strong>Tier 2</strong>, where a local model
+      proposes a mapping such as <code>set admintimeout 10</code> → <code>mgmt.idle_timeout_min</code>. The
+      mapping is applied as a deterministic rule, <em>never</em> as a judgement. At low confidence,
+      <strong>Tier 3</strong> asks an administrator and signs the confirmed mapping into an adapter pack,
+      so the next run handles that line at Tier 0. A low-confidence fingerprint runs no parser at all:
+      an unknown device reports UNKNOWN instead of being misread.</p>
+
+      <h2><span class="n">07</span>Remediation that cannot lock you out</h2>
+      <p>Administrators ignore compliance reports when applying the fixes is scarier than the
+      findings. Fixes are ordered by safety, not severity: <span class="m">0</span> establish the safe path
+      (enable SSH) → <span class="m">1</span> harden → <span class="m">2</span> disable weak services (Telnet off) →
+      <span class="m">3</span> restrict management access. Pasted top to bottom, the administrator is never cut off.</p>
+    </div>
+    <div>
+      <h2><span class="n">08</span>Tamper-evident reports: the blockchain half, done honestly</h2>
+      <p>An audit issued by a national body must be provably unaltered after issue. Each finding
+      <em>and its evidence</em> is canonically serialised and hashed:</p>
+      <div class="chain">finding + evidence ─► SHA-256 leaf  (domain-separated)
+per-report Merkle tree ─► merkle_root
+ledger entry {seq, time, report_id, merkle_root,
+              prev_entry_hash} ─► Ed25519 signature
+PDF footer ─► report id · ledger seq · verify hash</div>
+      <p>Change one character of a past entry and its signature fails and the next link breaks.
+      Hiding that means re-signing every later entry, which needs the private key. <code>crucible verify</code> checks the chain and signatures offline, with only the ledger and the
+      public key. There is one writer and no mutually distrusting peers, so a consensus blockchain would
+      add operational weight and no integrity (ADR 0006).</p>
+
+      <h2><span class="n">09</span>Technology</h2>
+      <p><strong>Today:</strong> Python 3.11, PyYAML, ReportLab, cryptography, FastAPI; a plain HTML/JS
+      console. One process, no database, no container. <strong>Planned:</strong> Ollama (local LLM),
+      local embeddings, Next.js training GUI, NetworkX/Batfish, containerlab + VyOS.</p>
+    </div>
+  </div>
+
+  <h2><span class="n">10</span>Measured on the current build <span style="font-weight:400;letter-spacing:.03em;color:var(--muted);text-transform:none">· no accuracy figure claimed yet: precision/recall on a labelled corpus is Phase 3</span></h2>
+  <div class="facts">
+    <div><b>101</b><span>tests passing</span></div>
+    <div><b>≈1 s</b><span>5 vendors audited, offline</span></div>
+    <div><b>99.6%</b><span>mean line coverage</span></div>
+    <div><b>13 × 3</b><span>controls × frameworks</span></div>
+  </div>
+
+  <div class="road">
+    <div><span class="m">Phase 0 · done</span>IR schema and rule format frozen, specs, ADRs</div>
+    <div><span class="m">Phase 1 · done</span>config in → line-cited, signed PDF out</div>
+    <div class="next"><span class="m">Phase 2 · next</span>training loop, adapter packs, XCCDF, ISO</div>
+    <div class="next"><span class="m">Phase 3</span>fleet graph, attack-path ranking, accuracy</div>
+    <div class="next"><span class="m">Phase 4</span>Crucible: prove the finding and the fix on a twin</div>
+  </div>
+
+  <div class="foot"><span>Source: github.com/Crepco/SIH26155 · full design in docs/02–11 and docs/adr</span><span>2 / 2</span></div>
+</section>
+
+</body>
+</html>

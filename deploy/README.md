@@ -29,6 +29,9 @@ the posture a report was generated under.
 
 ## First run
 
-Setup instructions land with Phase 1, and they will be written so that someone outside the team
-can follow them cold — that is a stated submission requirement, and it is also the only way to
-find out whether they are real.
+The current build does not need this stack. It runs as a single Python process with no database,
+broker or container. Follow the setup section of the
+[top-level README](../README.md#setup-five-minutes-no-internet-needed-after-install).
+
+The compose stack above is the planned multi-user deployment. It becomes necessary when bulk
+audits, the local model (Phase 2) and the fleet graph (Phase 3) arrive.

@@ -49,12 +49,11 @@ Architecture decisions that would otherwise be re-litigated every week live in
 
 ## Submission artefacts
 
-The problem statement requires five artefacts. Each is generated from the documents above.
+What went in for the 20 Sep idea round. Everything submitted lives in [submission/](submission/).
 
-| Artefact | Source |
-|----------|--------|
+| Artefact | Where |
+|----------|-------|
 | Source code link | This repository |
 | README with setup instructions | [../README.md](../README.md) |
-| Two-page architecture document | Distilled from [02](02-architecture.md) — lead with the IR pivot and the five invariants |
-| Two-minute demo video | Scripted from [15](15-demo-script.md) |
-| Five-slide technical presentation | Problem, architecture, differentiators, measured results, deployment path |
+| Two-page architecture document | [submission/Crucible-Architecture.pdf](submission/Crucible-Architecture.pdf), rendered from [submission/architecture.html](submission/architecture.html); GitHub version at [submission/ARCHITECTURE.md](submission/ARCHITECTURE.md) |
+| Two-minute demo video | Shot list and voice-over: [submission/demo-video-script.md](submission/demo-video-script.md). Covers the built system only, unlike [15](15-demo-script.md) |

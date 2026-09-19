@@ -4,173 +4,153 @@
 
 **Compliance you can prove.**
 
-An AI-driven, vendor-agnostic network security compliance auditor that runs fully air-gapped —
-and proves every high-severity finding against a disposable digital twin before an administrator
-touches production.
+A vendor-agnostic network security compliance auditor that runs fully air-gapped, cites the exact
+configuration line behind every finding, and signs every report into a tamper-evident ledger.
 
-Smart India Hackathon 2026 · Problem Statement **SIH26155** · National Technical Research Organisation
+Smart India Hackathon 2026 · Problem Statement **SIH26155** · National Technical Research Organisation ·
+Blockchain & Cybersecurity
+
+**[Architecture (PDF, 2 pages)](docs/submission/Crucible-Architecture.pdf)** ·
+[Architecture (Markdown)](docs/submission/ARCHITECTURE.md) ·
+**Demo video: VIDEO_LINK** ·
+[Setup](#setup-five-minutes-no-internet-needed-after-install)
 
 </div>
 
 ---
 
-> **Status: Phase 1 — the baseline pipeline works end to end.** Upload a real configuration,
-> get a correct, line-cited, signed PDF. Six vendors parse, 13 CIS controls evaluate, findings
-> are hash-chained into a tamper-evident ledger. 92 tests pass with no third-party test runner.
-> The AI layer (Tiers 1–3) and Crucible are next — see [docs/12-execution-plan.md](docs/12-execution-plan.md).
+## What it does today
 
-## The problem
+Point it at network device configurations from different vendors. In about one second, offline,
+you get this for each device:
 
-A single government or enterprise network runs firewalls from Palo Alto, Fortinet, Cisco and
-Check Point; switches and routers from Cisco, Arista, Juniper, HPE Aruba and MikroTik; cloud
-security groups in AWS and Azure; and white-box hardware running SONiC or Cumulus. Every one of
-those devices must comply with CIS Benchmarks, NIST SP 800-53, DISA STIGs and ISO/IEC 27001 —
-and every one of them speaks a different language.
+- **identity**: vendor, OS version, model and serial number, each cited to the file it came from
+- **findings**: pass, fail or unknown, by severity, each pointing at the **file and line number**
+  that caused it
+- **coverage**: how much of the file was actually understood (`parsed 163 of 164 lines`), with
+  the lines it could not interpret listed word for word
+- **remediation**: vendor-specific CLI, ordered so that applying it top to bottom cannot lock the
+  administrator out
+- **a signed PDF**: with a verification hash on every page, recorded in an Ed25519-signed,
+  hash-chained ledger that shows any later edit
 
-Today an auditor either works a three-hundred-item checklist by hand, or buys a vendor-locked
-enterprise suite that only understands its own ecosystem. NTRO asked for the third option.
+This happens through a browser console or a CLI. There is no cloud model, no outbound call, and
+no database.
 
-## The approach
+## Status: what is built and what is not
 
-Everything pivots on a **vendor-neutral intermediate representation** — an LLVM IR for network
-security posture. Parsers write into it; rules, reports, remediation, graph analysis and the
-verification sandbox read only from it.
+We would rather show a working foundation and an honest gap than claim features that don't run.
 
-```
-config files (any vendor, single or bulk)
-        |
-        v
-[1] INGESTION + FINGERPRINTING            vendor · model · OS version · serial
-        |
-        v
-[2] PARSING CASCADE                       <-- this is where the "AI" actually lives
-     Tier 0  known vendor      -> deterministic parser
-     Tier 1  structural infer  -> generic config tree
-     Tier 2  local LLM + embeddings PROPOSE A MAPPING (never a verdict)
-     Tier 3  training GUI      -> admin confirms -> signed Vendor Adapter Pack
-        |
-        v
-[3] NORMALISED SECURITY BASELINE MODEL (vendor-neutral JSON)
-        |                                   |
-        v                                   v
-[4] POLICY ENGINE                       [5] FLEET GRAPH
-    CIS / NIST / STIG / ISO                 cross-device correlation
-    rules as versioned YAML                 + attack-path queries
-        |                                   |
-        +-----------------+-----------------+
-                          v
-[6] REPORTING   per-device PDF + fleet report, signed and hash-chained
-                          |
-                          v
-[7] CRUCIBLE    boot a disposable twin -> demonstrate -> remediate
-                -> re-test -> regression
-```
+| | Component | Status |
+|---|-----------|--------|
+| ✅ | Ingestion: single files, bulk upload, directories, device bundles, zip archives (safe against path traversal and zip bombs) | **Built** |
+| ✅ | Fingerprinting: vendor, OS, version, model and serial, with a confidence score (6 vendors recognised) | **Built** |
+| ✅ | Tier-0 parsers: **Cisco IOS, Arista EOS, Fortinet FortiOS, Juniper Junos, MikroTik RouterOS**, plus `show version` output | **Built** |
+| ✅ | Vendor-neutral IR (JSON Schema v1.0.0, frozen), with per-fact provenance and line coverage accounting | **Built** |
+| ✅ | Three-valued policy engine: 13 controls written as YAML, each mapped to **CIS v8, NIST SP 800-53 and DISA STIG** | **Built** |
+| ✅ | Reports: JSON, Markdown and PDF, with line-cited evidence, safety-ordered remediation and a what-if score | **Built** |
+| ✅ | Tamper-evident ledger: Merkle-rooted reports, hash chain, Ed25519 signatures, `verify` command | **Built** |
+| ✅ | Audit console (browser) served by the API. No external assets, enforced by a test | **Built** |
+| ✅ | 101 tests, runnable without pytest | **Built** |
+| ⏳ | AI training module (Tiers 1–3): structural inference, a local-LLM mapping proposal, the training GUI, signed Vendor Adapter Packs | Specified · Phase 2 |
+| ⏳ | ISO/IEC 27001 rules; XCCDF importer for full STIG coverage; PAN-OS parser | Specified · Phase 2 |
+| ⏳ | Fleet attack-path graph: cross-device correlation, remediation ranked by paths severed | Specified · Phase 3 |
+| ⏳ | Crucible sandbox: boot a disposable digital twin, demonstrate the finding, verify the fix | Specified · Phase 4 |
 
-Full description: [docs/02-architecture.md](docs/02-architecture.md).
+An unrecognised vendor currently produces an honest `UNKNOWN` for every control. It is never
+reported as a pass. The learning loop that closes that gap is Phase 2.
 
-## The five invariants
+---
 
-These are architectural guarantees, not aspirations. They are what separates an audit tool from
-a chatbot with a file upload.
+## Setup (five minutes, no internet needed after install)
 
-| # | Invariant | Consequence |
-|---|-----------|-------------|
-| 1 | **The AI never decides pass or fail.** It only writes parsers. | Model output is a candidate extraction rule, applied deterministically. AI proposes; the engine disposes. |
-| 2 | **Every finding carries line-level evidence.** | File, line number and raw text. Audits reproduce byte-for-byte. |
-| 3 | **Fail closed.** Unparsed input can never produce a pass. | Anything uninterpreted is reported `UNKNOWN` and counted against coverage. |
-| 4 | **Coverage is published, not hidden.** | Every report states `parsed 12,847 of 13,102 lines (98.1%)`. |
-| 5 | **Findings have three honest states, never two.** | `DEMONSTRATED` · `ASSERTED` · `UNKNOWN`. We never fabricate certainty. |
+### Prerequisites
 
-## What makes this different
+- **Python 3.11 or newer.** Check with `python --version`.
+- Git. Nothing else: no Docker, no database, no Node, no GPU, no API key.
 
-- **Air-gapped by construction.** Local quantised model via Ollama, local embeddings, zero
-  outbound calls in any code path. The customer is NCIIPC — a cloud LLM API is a hard
-  disqualifier, not a preference.
-- **Learns vendors instead of hard-coding them.** Unrecognised lines are surfaced to an admin in
-  a low-code GUI and persisted as a **signed, portable Vendor Adapter Pack**. One organisation
-  teaches it; every deployment benefits the next morning.
-- **Rules are data, never code.** A compliance control is a YAML file. Adding a framework means
-  adding files, never writing Python.
-- **Reasons across the fleet, not device by device.** Two devices can each pass and the network
-  still be trivially breachable. Remediation is ranked by attack paths severed, not by CIS severity.
-- **Tamper-evident reports.** Findings are hash-chained into an append-only ledger, Merkle-rooted,
-  signed, with a verification hash printed in the PDF footer.
-- **Crucible: it proves the finding, and proves the fix is safe.** See
-  [docs/07-crucible-sandbox.md](docs/07-crucible-sandbox.md).
-
-> Every compliance tool tells you what is wrong. Ours proves it, fixes it, and proves the fix did
-> not break anything — against a disposable digital twin, fully air-gapped.
-
-## Repository layout
-
-| Path | Contents |
-|------|----------|
-| [docs/](docs/) | Specifications, execution plan, ADRs. Start at [docs/00-index.md](docs/00-index.md). |
-| [schemas/](schemas/) | Versioned JSON Schema for the intermediate representation and adapter packs. |
-| [rules/](rules/) | Compliance rules as YAML, one directory per framework. |
-| [backend/](backend/) | FastAPI service: ingestion, parsing cascade, policy engine, ledger, reporting. |
-| [frontend/](frontend/) | Next.js dashboard, training GUI and fleet graph view. |
-| [corpus/](corpus/) | Real multi-vendor configuration corpus and hand-labelled ground truth. |
-| [adapters/](adapters/) | Vendor Adapter Packs — exported, signed, importable. |
-| [labs/](labs/) | containerlab topologies for corpus generation and Crucible twins. |
-| [deploy/](deploy/) | Compose files and the offline installation bundle. |
-| [scripts/](scripts/) | Operator and developer task scripts. |
-
-## Deliverable mapping
-
-The problem statement names five required components. Each maps to a directory and a spec.
-
-| NTRO requirement | Where it lives |
-|------------------|----------------|
-| 1. Unified Ingestion Engine | `backend/crucible/ingest` · [docs/05](docs/05-parsing-cascade.md) |
-| 2. AI-Powered Training Module | `backend/crucible/training` + `frontend/` · [docs/06](docs/06-adapter-packs.md) |
-| 3. Multi-Framework Compliance Engine | `backend/crucible/policy` + `rules/` · [docs/04](docs/04-rule-format.md) |
-| 4. Actionable Intelligence & PDF Reporting | `backend/crucible/report` · [docs/10](docs/10-reporting.md) |
-| 5. Vendor-Agnostic Scalability | `schemas/ir` + `adapters/` · [docs/03](docs/03-ir-schema.md) |
-
-## Roadmap
-
-| Phase | Dates | Headline | Definition of done |
-|-------|-------|----------|--------------------|
-| 0 | 25–31 Aug | Foundations | IR schema frozen, 60+ real configs collected, 20 hand-labelled |
-| 1 | 1–7 Sep | Core pipeline end to end | Upload a real Cisco config, get a correct line-cited PDF |
-| 2 | 8–14 Sep | The AI layer | Hold out a vendor, train it cold in under three minutes, export the pack |
-| 3 | 15–19 Sep | Differentiators | A demo that survives an audience, and a real accuracy figure |
-| — | **20 Sep** | **Idea submission closes** | Four artefacts, each mapped to the five-component list |
-| 4 | 21 Sep on | Crucible | `crucible verify` confirms a finding live, under 15 s, offline |
-| 5 | Pre-finale | Hardening | Something that looks like a product, not a prototype |
-
-Full plan with owners and risks: [docs/12-execution-plan.md](docs/12-execution-plan.md) ·
-[docs/14-risk-register.md](docs/14-risk-register.md) · [CHANGELOG.md](CHANGELOG.md).
-
-## Getting started
-
-Python 3.11+. The core pipeline runs on the standard library plus three packages — and, like
-everything else here, it makes no network calls.
+### 1. Clone and install
 
 ```bash
-pip install pyyaml reportlab cryptography      # core
-pip install fastapi uvicorn                    # optional: the HTTP API
+git clone https://github.com/Crepco/SIH26155.git
+cd SIH26155
+python -m pip install -r backend/requirements.txt
+```
 
+This installs six small packages (PyYAML, ReportLab, cryptography, FastAPI, Uvicorn,
+python-multipart). A virtual environment is optional but recommended:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -r backend/requirements.txt
+```
+
+### 2. Check the install
+
+```bash
 cd backend
-python -m crucible.api.cli audit tests/fixtures/devices --rules ../rules/cis --out ../reports
+python tests/run_tests.py
 ```
 
-That audits five real configurations from five vendors and writes a JSON, Markdown and PDF report
-per device, plus a signed `ledger.jsonl`. Then:
+Expected last line: **`101 passed`**.
+
+### 3. Run the audit console
 
 ```bash
-python -m crucible.api.cli verify ../reports/ledger.jsonl   # tamper check
-python -m crucible.api.cli show tests/fixtures/devices/cisco-ios-core-01   # the parsed IR
-python -m crucible.api.cli rules --rules ../rules/cis       # the loaded rule set
-python tests/run_tests.py                                   # 92 tests, no pytest required
+python -m uvicorn crucible.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-Or through `make`: `make demo`, `make verify`, `make test`, `make serve`.
+Open **<http://127.0.0.1:8000>** and click **Audit the sample fleet**. That audits five real
+configurations from five vendors. Then:
+
+1. Click **core-sw-01** in the fleet list.
+2. Expand **CIS-NET-1.1.1 (Telnet)**. The device's own config appears at its real line numbers,
+   with line 102 marked.
+3. Look at **COVERAGE** (163 of 164 lines) and **NOT INTERPRETED** (the one line it could not
+   read, shown verbatim).
+4. Click the **UNKNOWN** filter. These are controls the engine refused to guess at.
+5. Scroll to **REMEDIATION**, then open the signed PDF for that device at
+   <http://127.0.0.1:8000/reports/cisco-ios-core-01.pdf>.
+
+You can also upload your own configurations with **Choose files**. You can switch Wi-Fi off before
+any of this; nothing changes.
+
+### 4. Or use the CLI
+
+Run these from the `backend/` directory:
+
+```bash
+# Audit the five sample devices, write JSON + Markdown + PDF per device and a signed ledger
+python -m crucible.api.cli audit tests/fixtures/devices --rules ../rules/cis --out ../reports
+
+# Check the ledger has not been altered
+python -m crucible.api.cli verify ../reports/ledger.jsonl
+
+# Only STIG-mapped controls (same parse, different framework)
+python -m crucible.api.cli audit tests/fixtures/devices --rules ../rules/cis --out ../reports --framework STIG
+
+# The vendor-neutral IR the rules actually read
+python -m crucible.api.cli show tests/fixtures/devices/cisco-ios-core-01
+
+# The loaded rule set
+python -m crucible.api.cli rules --rules ../rules/cis
+```
+
+`audit` exits with code `1` when it finds serious findings and `2` when the audit could not run, so a
+CI job can never confuse the two. Reports land in `reports/` at the repository root.
+
+**Try the tamper check.** Open `reports/ledger.jsonl`, change one character in the second entry's
+`merkle_root`, save, and run `verify` again. It reports `TAMPERED`: that entry's signature fails, and the next
+entry's link to it breaks. Hiding the edit would mean re-signing every later entry, which needs the
+issuing private key.
 
 ### What a run looks like
 
 ```
+  CRUCIBLE 0.1.0   rules: 13 (digest 49c9878c30156358)
+  5 device(s)   fleet score 28%   mean coverage 99.6%
+
   core-sw-01
     cisco IOS 15.2(4)E10  serial FDO1234ABCD
     score  [#######.................] 31%  -> 85% after remediation
@@ -181,17 +161,120 @@ Or through `make`: `make demo`, `make verify`, `make test`, `make serve`.
       UNKN high     CIS-NET-5.3.1  Weak SSH key exchange algorithms must not be   no line to cite
 ```
 
-Every failure cites a line. Every `UNKN` is a control we refused to guess at. Exit code `1` means
-findings, `2` means the audit could not run — a CI job must never confuse the two.
+Every failure cites a line. Every `UNKN` is a control we refused to guess at.
 
-### Where to read next
+### Troubleshooting
 
-- [docs/00-index.md](docs/00-index.md) — every specification, in reading order
-- [CONTRIBUTING.md](CONTRIBUTING.md) — track ownership, branch and commit conventions, and the
-  seven rules a review will reject a PR for
-- [docs/adr/](docs/adr/) — decisions already made, and not re-litigated
+| Symptom | Fix |
+|---------|-----|
+| `python` is 3.10 or older | On Windows use `py -3.11`, elsewhere `python3.11` |
+| Port 8000 already in use | Add `--port 8010` and open that port instead |
+| Console page is blank | Hard refresh (Ctrl+Shift+R). The CLI prints the same findings |
+| `Form data requires "python-multipart"` | Install from `backend/requirements.txt`, not package by package |
+| `make` targets | Optional shortcuts (`make test`, `make demo`, `make serve`, `make verify`), for Linux/macOS |
+
+---
+
+## The approach
+
+Everything pivots on a **vendor-neutral intermediate representation**, an LLVM-style IR for
+network security posture. Parsers write into it. Rules, reports, remediation and (later) graph
+analysis and the sandbox read only from it. Adding a vendor never touches a rule; adding a
+framework never touches a parser.
+
+```
+config files (any vendor, single or bulk)
+        |
+        v
+[1] INGESTION + FINGERPRINTING            vendor · model · OS version · serial        built
+        |
+        v
+[2] PARSING CASCADE
+     Tier 0  known vendor      -> deterministic parser                             built (5 vendors)
+     Tier 1  structural infer  -> generic config tree                              Phase 2
+     Tier 2  local LLM PROPOSES a mapping (never a verdict)                        Phase 2
+     Tier 3  training GUI      -> admin confirms -> signed Vendor Adapter Pack     Phase 2
+        |
+        v
+[3] NORMALISED SECURITY BASELINE MODEL (vendor-neutral JSON IR)                    built
+        |                                   |
+        v                                   v
+[4] POLICY ENGINE  (rules as YAML)      [5] FLEET GRAPH                            built | Phase 3
+        |                                   |
+        +-----------------+-----------------+
+                          v
+[6] REPORTING   per-device PDF, signed and hash-chained                           built
+                          |
+                          v
+[7] CRUCIBLE    disposable twin -> demonstrate -> remediate -> re-test             Phase 4
+```
+
+The two-page summary is [docs/submission/ARCHITECTURE.md](docs/submission/ARCHITECTURE.md), and the full
+design is in [docs/02-architecture.md](docs/02-architecture.md).
+
+## The five invariants
+
+These are guarantees built into the architecture, and the tests enforce them.
+
+| # | Invariant | Consequence |
+|---|-----------|-------------|
+| 1 | **The AI never decides pass or fail.** It only writes parsers. | Model output is a candidate extraction rule, applied deterministically. The AI proposes and the engine decides. This build has no model in the verdict path at all. |
+| 2 | **Every finding carries line-level evidence.** | File, line number and raw text. Audits reproduce byte for byte. |
+| 3 | **Fail closed.** Unparsed input can never produce a pass. | Anything uninterpreted is reported `UNKNOWN` and counted against coverage. |
+| 4 | **Coverage is published, not hidden.** | Every report states `parsed N of M lines` and lists the rest verbatim. |
+| 5 | **Findings have three honest states, never two.** | `DEMONSTRATED` · `ASSERTED` · `UNKNOWN`. Until the sandbox lands, nothing is marked `DEMONSTRATED`. |
+
+## Mapping to the NTRO requirements
+
+| NTRO component | Where it lives | Status |
+|----------------|----------------|--------|
+| 1. Unified Ingestion Engine | `backend/crucible/ingest`, `fingerprint` · console **Choose files** · `POST /audit` | **Built.** Single and bulk upload, bundles, archives |
+| 2. AI-Powered Training Module | `backend/crucible/training` · [adapters/](adapters/) · [docs/06](docs/06-adapter-packs.md) | **Specified, Phase 2.** Today every uninterpreted line is already surfaced verbatim; that list is the training GUI's input |
+| 3. Multi-Framework Compliance Engine | `backend/crucible/policy` · [rules/](rules/) · [docs/04](docs/04-rule-format.md) | **Built for CIS / NIST / STIG** (13 controls, one parse, `--framework` selects). ISO and XCCDF import: Phase 2 |
+| 4. Actionable Intelligence & PDF Reporting | `backend/crucible/report`, `ledger` · [docs/10](docs/10-reporting.md) | **Built.** Identity incl. serial, severity, line evidence, vendor CLI, signed PDF |
+| 5. Vendor-Agnostic Scalability | [schemas/ir](schemas/ir/) · rules as data · parser registry · [docs/03](docs/03-ir-schema.md) | **Built foundation.** New rules need no code; new vendors will need no code once adapter packs land (Phase 2) |
+
+## Why these design choices
+
+- **Air-gapped by construction.** The customer is NCIIPC. A device config is a blueprint of a
+  network's defences, and sending it to a cloud API is disqualifying, whatever the preference.
+  This build makes no outbound call, and a test fails the build if any console asset tries to
+  reach off the machine. The planned AI tiers use a local quantised model
+  ([ADR 0003](docs/adr/0003-local-models-only.md)).
+- **Rules are data, never code.** A control is a YAML file with its assertion, rationale, framework
+  mappings and per-vendor remediation ([ADR 0002](docs/adr/0002-rules-as-data.md)).
+- **A signed hash chain, not a blockchain.** There is one writer and no peers, so consensus would add
+  weight and no integrity. Merkle roots, chaining and Ed25519 give tamper evidence that anyone can
+  verify offline ([ADR 0006](docs/adr/0006-no-permissioned-blockchain.md)).
+- **Remediation that won't lock you out.** Fixes are grouped into four phases: establish the safe
+  path, harden, disable weak services, and only then restrict management access.
+
+## Repository layout
+
+| Path | Contents |
+|------|----------|
+| [backend/](backend/) | Python package `crucible`: ingestion, parsers, IR, policy engine, reports, ledger, CLI and FastAPI service |
+| [frontend/public/](frontend/public/) | The audit console: plain HTML/CSS/JS served by the API, no build step. The Next.js scaffold beside it is for the Phase 2 training GUI |
+| [rules/](rules/) | Compliance controls as YAML |
+| [schemas/](schemas/) | Versioned JSON Schemas for the IR, rules and adapter packs |
+| [docs/](docs/) | Specifications, execution plan, ADRs. Start at [docs/00-index.md](docs/00-index.md) |
+| [adapters/](adapters/) | Vendor Adapter Pack format and a worked example |
+| [labs/](labs/), [deploy/](deploy/) | containerlab topologies and the planned deployment stack (later phases) |
+
+## Roadmap
+
+| Phase | Headline | State |
+|-------|----------|-------|
+| 0 | Foundations: IR schema frozen, rule format, specs, ADRs | Done |
+| 1 | Core pipeline end to end: real config in, line-cited signed PDF out | **Done** |
+| 2 | The AI layer: structural inference, local-LLM mapping proposals, training GUI, adapter packs, XCCDF | Next |
+| 3 | Fleet graph and attack-path-ranked remediation; measured precision/recall on a labelled corpus | Planned |
+| 4 | Crucible: `crucible verify` confirms a finding live against a twin, offline | Planned |
+
+Details: [docs/12-execution-plan.md](docs/12-execution-plan.md) · [CHANGELOG.md](CHANGELOG.md) ·
+[docs/14-risk-register.md](docs/14-risk-register.md)
 
 ## Licence
 
-[MIT](LICENSE). CIS Benchmark text is not reproduced in this repository or in generated reports —
-see the third-party content notice in the licence file.
+[MIT](LICENSE). CIS Benchmark text is not reproduced in this repository or in generated reports.
+See the third-party content notice in the licence file.

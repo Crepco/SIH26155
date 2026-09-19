@@ -3,6 +3,23 @@
 Notable changes to Crucible. Format loosely follows Keep a Changelog; versions track the phase
 plan in [docs/12-execution-plan.md](docs/12-execution-plan.md).
 
+## [Unreleased] — idea-round submission (20 Sep 2026)
+
+### Added
+
+- **Audit console** served by the API at `/`: plain HTML/CSS/JS with the evidence gutter, coverage
+  and three-state filters, and a test that fails if any asset reaches off the host.
+- `backend/requirements.txt` with only what the current build needs, including `python-multipart`,
+  which FastAPI requires for uploads and the old one-line install left out.
+- Submission artefacts in `docs/submission/`: a two-page architecture document (PDF and Markdown)
+  and the two-minute demo video script.
+
+### Changed
+
+- README rewritten for someone cloning it cold: built-versus-specified status, Windows-friendly setup,
+  and the NTRO component mapping with an honest status per component.
+- Test count is now 101.
+
 ## [0.1.0] — Phase 1, the baseline pipeline (28 Aug 2026)
 
 Upload a real configuration, get a correct, line-cited, signed PDF. The whole loop is closed.

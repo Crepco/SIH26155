@@ -62,6 +62,7 @@ sandbox-runs/
 # Generated audit output
 # ---------------------------------------------------------------------------
 reports/out/
+/reports/
 *.audit.json
 ledger.db
 

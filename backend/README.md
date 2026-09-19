@@ -2,7 +2,10 @@
 
 FastAPI service. Everything from an uploaded file to a signed PDF.
 
-**Status: Phase 0. This tree is structure and contracts only — implementation begins 1 Sep 2026.**
+**Status: Phase 1 complete.** `ingest`, `fingerprint`, `parsers`, `ir`, `policy`, `report`, `ledger` and
+`api` are implemented and covered by 101 tests (`python tests/run_tests.py`). `training`, `graph` and
+`sandbox` are specified only; they are Phases 2 to 4. To run it, see the setup section of the
+[top-level README](../README.md#setup-five-minutes-no-internet-needed-after-install).
 
 ## Package layout
 

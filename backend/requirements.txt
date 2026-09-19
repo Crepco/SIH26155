@@ -1,0 +1,17 @@
+# ---------------------------------------------------------------------------
+# What the current build actually needs to run: the pipeline, the CLI, the
+# HTTP API and the audit console. Nothing here makes a network call at runtime.
+#
+# pyproject.toml lists the full planned stack (Celery, Postgres, Neo4j, model
+# tooling) for later phases. None of it is needed to run or evaluate this build.
+# ---------------------------------------------------------------------------
+
+# core pipeline: rules, reports, signing
+pyyaml>=6.0
+reportlab>=4.2
+cryptography>=44.0
+
+# HTTP API and the audit console
+fastapi>=0.115
+uvicorn>=0.32
+python-multipart>=0.0.9   # required by FastAPI for file uploads

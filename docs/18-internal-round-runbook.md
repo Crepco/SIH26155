@@ -152,7 +152,7 @@ a script here is far less convincing.
 python -m crucible.api.cli verify ../reports/ledger.jsonl
 ```
 
-> "Signature fails on the entry I edited, and the chain breaks on every entry after it. Each entry
+> "Signature fails on the entry I edited, and the next entry's link to it breaks. Each entry
 > commits to the hash of the one before, so you cannot quietly revise a past audit — you would
 > have to forge the issuing key.
 >
@@ -171,7 +171,7 @@ python -m crucible.api.cli audit tests/fixtures/devices --rules ../rules/cis --o
 
 Put this on a slide. Say it plainly.
 
-> "What you just saw is real and runs offline today: ingestion, six vendor parsers, the
+> "What you just saw is real and runs offline today: ingestion, five vendor parsers, the
 > vendor-neutral IR, the rule engine, line-cited reports, and the signed ledger. 101 tests,
 > including one that fails the build if any asset on that page tries to reach the internet.
 >
@@ -193,7 +193,7 @@ Getting caught overclaiming is worse than any missing feature.
 | "It learns new vendors automatically" | Tiers 1–3 are not implemented. An unknown vendor currently reports UNKNOWN — correct, but not learning. |
 | "We prove findings against a live twin" | Crucible is Phase 4. No finding in this build can reach DEMONSTRATED. |
 | "It maps attack paths across the fleet" | The fleet graph is Phase 3. |
-| "We support forty vendors" | Six parsers exist. PAN-OS is fingerprinted but has no parser. |
+| "We support forty vendors" | Five vendor parsers exist. PAN-OS is fingerprinted but has no parser. |
 | "300+ STIG controls" | The XCCDF importer is not written. There are 13 hand-authored CIS rules. |
 | "The AI proposes mappings" | True of the design, not of this build — there is no model in it at all yet. |
 
@@ -206,7 +206,7 @@ Safe framing for all of these: **"specified, and Phase N."** Point at the ADR.
 **"Where is the AI? This looks like regexes."**
 > "Correct, and that is the architecture rather than a gap. The AI in our design writes *parsers*,
 > never verdicts — it proposes a field mapping for a line no deterministic parser claimed, and
-> that mapping is then applied deterministically. Six vendors are handled at tier 0, so today the
+> that mapping is then applied deterministically. Five vendors are handled at tier 0, so today the
 > model layer has nothing to do. It matters on vendor seven, and that is Phase 2. ADR 0004."
 
 **"Why is so much UNKNOWN? That looks like it failed."**
