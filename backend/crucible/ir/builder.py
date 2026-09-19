@@ -75,6 +75,21 @@ class IRBuilder:
     def raw_line(self, filename: str, line: int) -> str:
         return self._lines.get(filename, {}).get(line, "")
 
+    def is_claimed(self, filename: str, line: int) -> bool:
+        return line in self._claimed.get(filename, {})
+
+    def unclaimed(self, filename: str) -> list[int]:
+        """Line numbers no tier has claimed yet, in order.
+
+        What falls through to the next tier. Later tiers work on exactly this
+        residue and nothing else, which is why the model never sees a whole file.
+        """
+        claimed = self._claimed.get(filename, {})
+        return [n for n in sorted(self._lines.get(filename, {})) if n not in claimed]
+
+    def files(self) -> list[str]:
+        return list(self._lines)
+
     # -- facts ------------------------------------------------------------
 
     def set(
@@ -120,6 +135,8 @@ class IRBuilder:
         file: str,
         line: int,
         tier: int = 0,
+        adapter_pack: str | None = None,
+        confidence_bp: int = 10000,
         claim: bool = True,
         secret: str | None = None,
     ) -> int:
@@ -140,7 +157,14 @@ class IRBuilder:
         existing.append(value)
         index = len(existing) - 1
         raw = redact_literal(self.raw_line(file, line), secret)
-        self._provenance[f"{path}[{index}]"] = Provenance(file=file, line=line, raw=raw, tier=tier)
+        self._provenance[f"{path}[{index}]"] = Provenance(
+            file=file,
+            line=line,
+            raw=raw,
+            tier=tier,
+            adapter_pack=adapter_pack,
+            confidence_bp=confidence_bp,
+        )
         if claim:
             self.claim(file, line, tier)
         return index

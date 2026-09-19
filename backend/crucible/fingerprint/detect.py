@@ -158,12 +158,15 @@ def fingerprint(bundle: DeviceBundle) -> DeviceIdentity:
     runner_up = sorted(scores.values(), reverse=True)
     second = runner_up[1] if len(runner_up) > 1 else 0
 
-    # Confidence blends absolute evidence with how far ahead the winner is. Two
-    # vendors scoring similarly is exactly the case where a confident answer
-    # would be most damaging - IOS and EOS, for instance.
+    # Confidence is evidence strength *times* how far ahead the winner is. It
+    # used to be a sum, which let a single generic keyword (one
+    # `interface GigabitEthernet` line in a Huawei file) score 0.72 simply
+    # because no other vendor matched anything - and then the Cisco parser
+    # misread the file. Two vendors scoring similarly is still penalised
+    # through the margin: IOS and EOS, for instance.
     absolute = min(best / 20.0, 1.0)
     margin = (best - second) / best if best else 0.0
-    confidence = round(min(0.5 * absolute + 0.5 * margin + 0.15, 1.0), 3)
+    confidence = round(min(0.15 + 0.85 * absolute, 1.0) * (0.5 + 0.5 * margin), 3)
 
     identity = DeviceIdentity(
         vendor=vendor,
