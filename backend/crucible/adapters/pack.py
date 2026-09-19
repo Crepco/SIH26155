@@ -65,8 +65,15 @@ _CRYPT = re.compile(r"\$\d\$")
 
 
 def _unescape(pattern: str) -> str:
-    """Strip regex escapes so ``10\\.0\\.0\\.1`` is seen as the address it is."""
-    return re.sub(r"\\(.)", r"\1", pattern)
+    """Reduce a pattern to the literal text it would match.
+
+    An escaped address must be seen as the address it is. Character-class
+    escapes such as ``\\s+`` and ``\\d`` are not literals, so they become spaces
+    rather than the letters ``s`` and ``d`` - otherwise a harmless
+    ``telnet\\s+server`` reads as one long credential-shaped token.
+    """
+    classes = re.sub(r"\\[sSdDwWbB][+*?]?", " ", pattern)
+    return re.sub(r"\\(.)", r"\1", classes)
 
 
 def customer_data_in(pattern: str) -> str | None:
