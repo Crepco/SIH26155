@@ -51,6 +51,7 @@ _PHASE_MARKERS: tuple[tuple[int, tuple[str, ...]], ...] = (
             "ip access-group",
             "firewall filter",
             "connection-limit",
+            "permitted-ip",
         ),
     ),
     (
@@ -67,6 +68,9 @@ _PHASE_MARKERS: tuple[tuple[int, tuple[str, ...]], ...] = (
             "no snmp-server community",
             "snmp community remove",
             "no username",
+            "disable-telnet yes",
+            "disable-http yes",
+            "access-setting version v2c",
         ),
     ),
     (
@@ -86,6 +90,12 @@ _PHASE_MARKERS: tuple[tuple[int, tuple[str, ...]], ...] = (
             "snmp-server user",
             "snmp-server group",
             "security-level",
+            "disable-ssh no",
+            "disable-https no",
+            "access-setting version v3",
+            "ntp-servers",
+            "log-settings syslog",
+            "server-profile tacplus",
         ),
     ),
 )

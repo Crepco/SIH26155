@@ -12,6 +12,12 @@
     leaves, their access persists on every device that was never individually
     updated, which in practice means most of the fleet.
   remediation:
+    panos:
+      - "configure"
+      - "set shared server-profile tacplus TACACS server tac1 address 10.0.0.9 secret TACKEY"
+      - "set shared authentication-profile ADMIN method tacplus server-profile TACACS"
+      - "set deviceconfig system authentication-profile ADMIN"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "aaa new-model"
@@ -36,6 +42,10 @@
     backup is a copy of the administrative credentials. Configuration backups
     are routinely stored with far weaker controls than the devices themselves.
   remediation:
+    panos:
+      - "configure"
+      - "set mgt-config users admin password"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "username admin algorithm-type scrypt secret NEWPASSWORD"
@@ -59,6 +69,11 @@
     well-resourced adversary, which is precisely the adversary a critical
     infrastructure operator is defending against.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig system ssh profiles mgmt-profiles STRONG kex ecdh-sha2-nistp256"
+      - "set deviceconfig system ssh mgmt-config server-profile STRONG"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "ip ssh dh min size 2048"
@@ -84,6 +99,10 @@
     This is the condition that converts a compromised endpoint in an access
     closet into reachability against the management plane.
   remediation:
+    panos:
+      - "configure"
+      - "set zone untrust network layer3 ethernet1/1"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "interface range GigabitEthernet0/1 - 48"

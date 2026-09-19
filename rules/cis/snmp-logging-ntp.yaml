@@ -12,6 +12,12 @@
     A read-only community discloses the full device configuration; a read-write
     community is remote administrative control.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig system snmp-setting access-setting version v3 views monitor view all oid 1.3.6.1 option include"
+      - "set deviceconfig system snmp-setting access-setting version v3 users monitor view monitor authpwd AUTHPASS privpwd PRIVPASS"
+      - "delete deviceconfig system snmp-setting access-setting version v2c"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "no snmp-server community public"
@@ -47,6 +53,10 @@
     fleet discloses topology, interfaces and ACL names to an unauthenticated
     attacker.
   remediation:
+    panos:
+      - "configure"
+      - "delete deviceconfig system snmp-setting access-setting version v2c"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "no snmp-server community public"
@@ -68,6 +78,10 @@
     clears. Without central collection there is no record that survives the
     compromise of the device that produced it.
   remediation:
+    panos:
+      - "configure"
+      - "set shared log-settings syslog central-syslog server siem-01 server 10.0.0.5 transport UDP port 514"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "logging host 10.0.0.5"
@@ -94,6 +108,10 @@
     clocks make cross-device log correlation worthless and can silently expire
     or un-expire certificates across the fleet.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig system ntp-servers primary-ntp-server authentication-type symmetric-key key-id 1 algorithm sha1 authentication-key NTPKEY"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "ntp authenticate"

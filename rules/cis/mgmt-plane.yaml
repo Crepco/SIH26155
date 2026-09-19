@@ -13,6 +13,11 @@
     access to a transit segment recovers administrative credentials passively,
     with no exploit and no trace in the device log.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig system service disable-ssh no"
+      - "set deviceconfig system service disable-telnet yes"
+      - "commit"
     # SSH is enabled and confirmed BEFORE Telnet is removed. Reversing these two
     # steps disconnects an administrator who is currently connected over Telnet,
     # on a device they may have no other path to.
@@ -58,6 +63,10 @@
     session tampering. Leaving version 1 negotiable means an attacker chooses
     the weaker protocol on the administrator behalf.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig system service disable-ssh no"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "ip ssh version 2"
@@ -87,6 +96,10 @@
     console or a forgotten SSH window is indistinguishable from an authorised
     administrator for as long as the session survives.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig setting management idle-timeout 10"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "line vty 0 15"
@@ -119,6 +132,11 @@
     observer on the path, and is routinely the first service an internal
     scanner finds on a device that is otherwise well hardened.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig system service disable-https no"
+      - "set deviceconfig system service disable-http yes"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "no ip http server"
@@ -150,6 +168,10 @@
     its administrative services. This is the single condition that turns one
     compromised workstation into fleet-wide administrative access.
   remediation:
+    panos:
+      - "configure"
+      - "set deviceconfig system permitted-ip 10.0.0.0/24"
+      - "commit"
     cisco_ios:
       - "configure terminal"
       - "ip access-list standard MGMT_HOSTS"
