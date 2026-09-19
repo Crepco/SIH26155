@@ -64,9 +64,7 @@ def build_ir(bundle: DeviceBundle) -> ParsedDevice:
     # gets canonically serialised: the last bit can differ between platforms,
     # and an IR export that is not byte-identical between runs cannot be diffed
     # for drift or committed to reproducibly.
-    builder.set_device_unsourced(
-        "fingerprint_confidence_bp", round(identity.confidence * 10000)
-    )
+    builder.set_device_unsourced("fingerprint_confidence_bp", round(identity.confidence * 10000))
 
     # Identity from command output overwrites the guess, and does so with a
     # citation - a serial read off show version beats anything inferred.

@@ -32,7 +32,7 @@ class _Raises:
         self.expected = expected
         self.value: BaseException | None = None
 
-    def __enter__(self) -> "_Raises":
+    def __enter__(self) -> _Raises:
         return self
 
     def __exit__(self, exc_type, exc, _tb) -> bool:  # type: ignore[no-untyped-def]
@@ -109,7 +109,7 @@ def main(argv: list[str]) -> int:
             label = f"{file.stem}::{name}"
             try:
                 fn()
-            except Exception:  # noqa: BLE001 - a runner reports, it does not judge
+            except Exception:
                 failures.append((label, traceback.format_exc()))
                 print(f"  FAIL  {label}")
             else:

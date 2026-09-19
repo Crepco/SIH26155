@@ -58,7 +58,7 @@ class Resolution:
         return self.found and self.value is not None
 
     @classmethod
-    def missing(cls, path: str) -> "Resolution":
+    def missing(cls, path: str) -> Resolution:
         return cls(path=path, value=None, found=False, provenance=None)
 
 
@@ -74,7 +74,9 @@ class Coverage:
     total_lines: int = 0
     parsed_lines: int = 0
     unparsed_lines: int = 0
-    by_tier: dict[str, int] = field(default_factory=lambda: {"tier0": 0, "tier1": 0, "tier2": 0, "tier3": 0})
+    by_tier: dict[str, int] = field(
+        default_factory=lambda: {"tier0": 0, "tier1": 0, "tier2": 0, "tier3": 0}
+    )
     #: (file, line, raw) for every line nothing understood. Printed verbatim in
     #: Appendix C, which is what turns invariant 3 from a claim into something a
     #: reader can check.

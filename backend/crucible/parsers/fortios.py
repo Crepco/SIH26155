@@ -27,9 +27,21 @@ DEFAULT_COMMUNITIES = {"public", "private", "fortinet", "admin"}
 #: explicitly is the difference between "we understood this line and it does not
 #: matter" and "we never looked at it" - and only the first may count as parsed.
 _KNOWN_IRRELEVANT = {
-    "vdom", "type", "schedule", "srcintf", "dstintf", "action", "name",
-    "timezone", "facility", "status", "syncinterval", "description",
-    "admin-sport", "query-v1-status", "ntpsync",
+    "vdom",
+    "type",
+    "schedule",
+    "srcintf",
+    "dstintf",
+    "action",
+    "name",
+    "timezone",
+    "facility",
+    "status",
+    "syncinterval",
+    "description",
+    "admin-sport",
+    "query-v1-status",
+    "ntpsync",
 }
 
 
@@ -55,12 +67,16 @@ def parse_fortios(ctx: ParseContext) -> None:
             return
         index = ctx.append("interfaces", interface, interface_line)
         if interface.get("_acl_line"):
-            ctx.set(f"interfaces[{index}].acl_in", interface.get("acl_in"), int(interface.pop("_acl_line")))  # type: ignore[arg-type]
+            ctx.set(
+                f"interfaces[{index}].acl_in",
+                interface.get("acl_in"),
+                int(str(interface.pop("_acl_line"))),
+            )
         if interface.get("_shutdown_line"):
             ctx.set(
                 f"interfaces[{index}].shutdown",
                 interface.get("shutdown"),
-                int(interface.pop("_shutdown_line")),  # type: ignore[arg-type]
+                int(str(interface.pop("_shutdown_line"))),
             )
         interface = None
 
@@ -214,7 +230,9 @@ def parse_fortios(ctx: ParseContext) -> None:
                 # in the export, so recording "unknown" is the honest answer and
                 # the control reports UNKNOWN rather than guessing.
                 index = ctx.append(
-                    "aaa.local_users", {"name": current_edit, "privilege": None, "hash": None}, number
+                    "aaa.local_users",
+                    {"name": current_edit, "privilege": None, "hash": None},
+                    number,
                 )
                 ctx.set(f"aaa.local_users[{index}].hash", None, number)
                 continue

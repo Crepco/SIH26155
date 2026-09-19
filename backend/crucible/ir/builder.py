@@ -134,15 +134,13 @@ class IRBuilder:
         existing = container.get(key) if isinstance(container, dict) else None
         if existing is None:
             existing = []
-            container[key] = existing  # type: ignore[index]
+            container[key] = existing
         if not isinstance(existing, list):
             raise TypeError(f"{path} is not a list")
         existing.append(value)
         index = len(existing) - 1
         raw = redact_literal(self.raw_line(file, line), secret)
-        self._provenance[f"{path}[{index}]"] = Provenance(
-            file=file, line=line, raw=raw, tier=tier
-        )
+        self._provenance[f"{path}[{index}]"] = Provenance(file=file, line=line, raw=raw, tier=tier)
         if claim:
             self.claim(file, line, tier)
         return index
@@ -176,12 +174,12 @@ class IRBuilder:
                 container.append({})
             container[key] = value
         else:
-            container[key] = value  # type: ignore[index]
+            container[key] = value
 
     def _container_for(self, parts: list[str | int], *, create: bool) -> Any:
         if len(parts) == 1:
             return self._sections
-        root = parts[0]
+        root = str(parts[0])
         current: Any
         if root == "device":
             current = self._device

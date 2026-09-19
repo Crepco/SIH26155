@@ -19,7 +19,7 @@ from typing import Any
 
 from crucible.ingest.bundle import DeviceBundle, SourceFile
 
-__all__ = ["DeviceIdentity", "MIN_CONFIDENCE", "fingerprint"]
+__all__ = ["MIN_CONFIDENCE", "DeviceIdentity", "fingerprint"]
 
 #: Below this, we decline to name a vendor rather than guess.
 MIN_CONFIDENCE = 0.45

@@ -59,12 +59,18 @@ def render_markdown(report: AuditReport) -> str:
     severities = report.evaluation.severity_counts()
     add("## 2. Posture summary")
     add("")
-    add(f"- **Compliance score: {report.score}%** (projected after remediation: "
-        f"{report.projected_score()}%)")
-    add(f"- Failed: {counts['fail']} | Unknown: {counts['unknown']} | "
-        f"Passed: {counts['pass']} | Not applicable: {counts['not_applicable']}")
-    add(f"- By severity: critical {severities['critical']}, high {severities['high']}, "
-        f"medium {severities['medium']}, low {severities['low']}")
+    add(
+        f"- **Compliance score: {report.score}%** (projected after remediation: "
+        f"{report.projected_score()}%)"
+    )
+    add(
+        f"- Failed: {counts['fail']} | Unknown: {counts['unknown']} | "
+        f"Passed: {counts['pass']} | Not applicable: {counts['not_applicable']}"
+    )
+    add(
+        f"- By severity: critical {severities['critical']}, high {severities['high']}, "
+        f"medium {severities['medium']}, low {severities['low']}"
+    )
     add(f"- Frameworks evaluated: {', '.join(report.frameworks)}")
     add("")
 
@@ -75,8 +81,10 @@ def render_markdown(report: AuditReport) -> str:
     percent = round(100.0 * parsed / total, 1) if total else 0.0
     add("## 3. Coverage")
     add("")
-    add(f"**Parsed {parsed:,} of {total:,} lines ({percent}%). "
-        f"{coverage['unparsed_lines']:,} lines uninterpreted** - listed in Appendix C.")
+    add(
+        f"**Parsed {parsed:,} of {total:,} lines ({percent}%). "
+        f"{coverage['unparsed_lines']:,} lines uninterpreted** - listed in Appendix C."
+    )
     add("")
     if not report.parser_applied:
         add("> No deterministic parser was applied to this device: the vendor could not be")
@@ -98,8 +106,10 @@ def render_markdown(report: AuditReport) -> str:
         mark = _STATE_MARK[finding.state]
         add(f"### `{finding.rule_id}` - {finding.title}")
         add("")
-        add(f"**{finding.severity.value.upper()}** | {finding.verdict.value.upper()} | "
-            f"state: {mark}")
+        add(
+            f"**{finding.severity.value.upper()}** | {finding.verdict.value.upper()} | "
+            f"state: {mark}"
+        )
         add("")
         add(f"{finding.rationale}")
         add("")
@@ -138,8 +148,10 @@ def render_markdown(report: AuditReport) -> str:
         add("Nothing to apply.")
         add("")
     else:
-        add(f"{report.plan.command_count} commands across {len(report.plan.phases())} phases, "
-            f"rendered for `{report.plan.target}`.")
+        add(
+            f"{report.plan.command_count} commands across {len(report.plan.phases())} phases, "
+            f"rendered for `{report.plan.target}`."
+        )
         add("")
         add("**Ordered so that applying it top to bottom cannot lock you out.** The safe path")
         add("is established before the weak services it replaces are disabled, and management")
@@ -157,8 +169,10 @@ def render_markdown(report: AuditReport) -> str:
             add("```")
             add("")
     if report.plan.unsupported:
-        add(f"No remediation is available for `{report.device.get('vendor')}` for: "
-            f"{', '.join(report.plan.unsupported)}. Printing another platform's syntax would")
+        add(
+            f"No remediation is available for `{report.device.get('vendor')}` for: "
+            f"{', '.join(report.plan.unsupported)}. Printing another platform's syntax would"
+        )
         add("be worse than printing nothing, so these are listed rather than guessed.")
         add("")
 
@@ -189,8 +203,10 @@ def render_markdown(report: AuditReport) -> str:
     add("")
     add(f"Report `{report.report_id}` | Merkle root `{report.merkle_root}`")
     if report.verification_hash:
-        add(f"| Ledger entry {report.ledger_seq} | **Verification hash "
-            f"`{report.verification_hash}`**")
+        add(
+            f"| Ledger entry {report.ledger_seq} | **Verification hash "
+            f"`{report.verification_hash}`**"
+        )
     add("")
     add("Generated offline. No configuration data left this host.")
     add("")

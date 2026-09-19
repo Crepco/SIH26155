@@ -59,7 +59,9 @@ def test_loose_files_are_grouped_by_stem_into_one_device():
     """
     directory = _tmp()
     (directory / "core-01.cfg").write_text("hostname core-01\n", encoding="utf-8")
-    (directory / "core-01.show-version.txt").write_text("System serial number : ABC\n", encoding="utf-8")
+    (directory / "core-01.show-version.txt").write_text(
+        "System serial number : ABC\n", encoding="utf-8"
+    )
     (directory / "edge-02.cfg").write_text("hostname edge-02\n", encoding="utf-8")
 
     bundles = {b.device_id: b for b in load(directory)}

@@ -13,11 +13,12 @@ a device that never existed.
 from __future__ import annotations
 
 import hashlib
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from crucible.common.canonical import canonical_bytes, sha256_hex
 
-__all__ = ["leaf_hash", "merkle_root", "merkle_proof", "verify_proof"]
+__all__ = ["leaf_hash", "merkle_proof", "merkle_root", "verify_proof"]
 
 # Domain separation. Without distinct prefixes a leaf could be presented as an
 # internal node, which is the classic second-preimage attack on Merkle trees.

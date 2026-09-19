@@ -17,9 +17,7 @@ def _ir(sections: dict) -> IRDocument:  # type: ignore[type-arg]
     for section, values in sections.items():
         if isinstance(values, dict):
             for key in values:
-                provenance[f"{section}.{key}"] = Provenance(
-                    file="t.cfg", line=1, raw="x", tier=0
-                )
+                provenance[f"{section}.{key}"] = Provenance(file="t.cfg", line=1, raw="x", tier=0)
     return IRDocument(
         device={"vendor": "test"},
         sections=sections,
@@ -122,7 +120,9 @@ def test_all_and_any_bind_the_element_to_any_loop_variable_name():
             {"name": "e2", "shutdown": True, "acl_in": None},
         ]
     }
-    assert _eval("all(interfaces, iface.shutdown == true or defined(iface.acl_in))", sections) is True
+    assert (
+        _eval("all(interfaces, iface.shutdown == true or defined(iface.acl_in))", sections) is True
+    )
     assert _eval("any(anything, anything.shutdown == true)", sections) is UNKNOWN
     assert _eval("any(interfaces, x.shutdown == true)", sections) is True
 
@@ -183,9 +183,7 @@ def test_evaluation_is_deterministic():
     An audit that is not reproducible is not an audit.
     """
     ir = ir_for("cisco-ios-core-01")
-    expression = compile_expression(
-        "mgmt.telnet_enabled == false and mgmt.idle_timeout_min <= 10"
-    )
+    expression = compile_expression("mgmt.telnet_enabled == false and mgmt.idle_timeout_min <= 10")
     results = [expression.evaluate(ir) for _ in range(10)]
     assert len({str(r.value) for r in results}) == 1
     assert len({tuple(r.touched) for r in results}) == 1

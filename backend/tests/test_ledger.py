@@ -204,7 +204,7 @@ def test_signing_key_file_is_not_world_readable():
     directory = _tmp()
     path = directory / "signing" / "ed25519.key"
     load_or_create_key(path)
-    mode = stat.S_IMODE(os.stat(path).st_mode)
+    mode = stat.S_IMODE(path.stat().st_mode)
     # Windows does not honour POSIX bits; assert only where it means something.
     if os.name == "posix":
         assert mode == 0o600, f"key file mode is {oct(mode)}"

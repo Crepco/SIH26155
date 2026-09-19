@@ -31,8 +31,9 @@ Outside a list, a bare word is a path.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from crucible.common.errors import RuleError
 from crucible.ir.model import IRDocument
@@ -43,9 +44,9 @@ __all__ = ["UNKNOWN", "EvalResult", "Expression", "compile_expression"]
 class _Unknown:
     """The third truth value. A singleton so it can be compared with ``is``."""
 
-    _instance: "_Unknown | None" = None
+    _instance: _Unknown | None = None
 
-    def __new__(cls) -> "_Unknown":
+    def __new__(cls) -> _Unknown:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -134,7 +135,7 @@ class EvalResult:
 
 
 class _Node:
-    def evaluate(self, scope: "_Scope") -> Any:  # pragma: no cover - interface
+    def evaluate(self, scope: _Scope) -> Any:  # pragma: no cover - interface
         raise NotImplementedError
 
 
@@ -147,7 +148,7 @@ class _Scope:
     missing: list[str] = field(default_factory=list)
     absent: list[str] = field(default_factory=list)
 
-    def child(self, element: Any) -> "_Scope":
+    def child(self, element: Any) -> _Scope:
         return _Scope(
             ir=self.ir,
             element=element,
@@ -161,8 +162,17 @@ class _Scope:
 #: Top-level IR sections. Used to tell an IR path from a loop variable inside a
 #: quantifier body, which is the one place the two could be confused.
 _IR_ROOTS = {
-    "device", "mgmt", "aaa", "snmp", "logging", "ntp",
-    "interfaces", "acls", "routing", "services", "crypto",
+    "device",
+    "mgmt",
+    "aaa",
+    "snmp",
+    "logging",
+    "ntp",
+    "interfaces",
+    "acls",
+    "routing",
+    "services",
+    "crypto",
 }
 
 
@@ -582,7 +592,7 @@ class _Parser:
 class Expression:
     """A compiled assertion, reusable across every device in a fleet."""
 
-    __slots__ = ("source", "_root")
+    __slots__ = ("_root", "source")
 
     def __init__(self, source: str, root: _Node) -> None:
         self.source = source

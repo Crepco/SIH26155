@@ -11,9 +11,10 @@ immediately rather than failing on device 147 of 200.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 
@@ -96,10 +97,10 @@ class RuleSet:
     def __len__(self) -> int:
         return len(self.rules)
 
-    def __iter__(self) -> Iterable[Rule]:  # type: ignore[override]
+    def __iter__(self) -> Iterator[Rule]:
         return iter(self.rules)
 
-    def for_framework(self, framework: str) -> "RuleSet":
+    def for_framework(self, framework: str) -> RuleSet:
         """Filter by framework identifier, without re-parsing anything.
 
         This is the IR paying for itself: selecting NIST does not run a
@@ -154,14 +155,18 @@ def _parse_rule(raw: Any, source: str) -> Rule:
 
     missing = [key for key in _REQUIRED if key not in raw]
     if missing:
-        raise RuleError(f"{source}: rule {raw.get('id', '<no id>')} is missing {', '.join(missing)}")
+        raise RuleError(
+            f"{source}: rule {raw.get('id', '<no id>')} is missing {', '.join(missing)}"
+        )
 
     remediation = raw["remediation"]
     if not isinstance(remediation, dict) or not remediation:
         raise RuleError(f"{source}: rule {raw['id']} has no remediation")
     for target, commands in remediation.items():
         if not isinstance(commands, list) or not all(isinstance(c, str) for c in commands):
-            raise RuleError(f"{source}: rule {raw['id']} remediation.{target} must be a list of strings")
+            raise RuleError(
+                f"{source}: rule {raw['id']} remediation.{target} must be a list of strings"
+            )
 
     try:
         assertion = compile_expression(str(raw["assert"]))

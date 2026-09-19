@@ -9,10 +9,11 @@ here rather than trusted.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from conftest import ALL_DEVICES, evaluation_for, ir_for, parsed, ruleset
 
 from crucible.common.types import FindingState, Verdict
-
 
 # -- invariant 2: every finding carries line-level evidence -----------------
 
@@ -98,8 +99,7 @@ def test_unrecognised_vendor_yields_no_passes(tmp_path=None):
 
     evaluation = evaluate_device(device.ir, ruleset())
     assert not evaluation.passed, (
-        f"an unparsed device passed {len(evaluation.passed)} controls; "
-        "everything must be UNKNOWN"
+        f"an unparsed device passed {len(evaluation.passed)} controls; everything must be UNKNOWN"
     )
     assert all(f.verdict is Verdict.UNKNOWN for f in evaluation.findings)
     assert device.ir.coverage.parsed_lines == 0
@@ -210,8 +210,7 @@ def test_verdict_path_imports_no_model_layer():
     for module in (engine, expr, rules):
         source = module.__file__
         assert source
-        with open(source, encoding="utf-8") as handle:
-            text = handle.read()
+        text = Path(source).read_text(encoding="utf-8")
         for forbidden in ("crucible.training", "ollama", "openai", "anthropic", "transformers"):
             assert forbidden not in text, (
                 f"{module.__name__} references {forbidden}: the verdict path must contain no model"

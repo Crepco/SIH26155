@@ -157,7 +157,9 @@ def evaluate_device(
 
     # Most severe first. This is the order the report prints and the order an
     # administrator reads, so it is fixed here rather than left to the renderer.
-    evaluation.findings.sort(key=lambda f: (f.severity.rank, f.verdict is Verdict.UNKNOWN, f.rule_id))
+    evaluation.findings.sort(
+        key=lambda f: (f.severity.rank, f.verdict is Verdict.UNKNOWN, f.rule_id)
+    )
     return evaluation
 
 

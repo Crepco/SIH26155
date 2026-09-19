@@ -111,13 +111,11 @@ def create_app(rules_path: Path | None = None, data_dir: Path | None = None) -> 
             # file, so the device is identified as "core-sw-01" rather than as
             # the temporary directory it happened to land in. That name reaches
             # the report id, the artefact filenames and the ledger entry.
-            primary = next(
-                (n for n in names if "version" not in n.lower()), names[0]
-            )
+            primary = next((n for n in names if "version" not in n.lower()), names[0])
             device_dir = workdir / (primary.split(".")[0] or "device")
             device_dir.mkdir(parents=True, exist_ok=True)
 
-            for upload, name in zip(files, names):
+            for upload, name in zip(files, names, strict=True):
                 (device_dir / name).write_bytes(await upload.read())
 
             job = run_audit(

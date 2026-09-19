@@ -40,7 +40,7 @@ def test_no_asset_reaches_off_the_deployment():
         match = _EXTERNAL.search(text)
         assert match is None, (
             f"{path.name} references an external URL at offset {match.start()}: "
-            f"{text[match.start():match.start() + 60]!r}"
+            f"{text[match.start() : match.start() + 60]!r}"
         )
         for host in _FONT_HOSTS:
             assert host not in text, f"{path.name} references {host}"
@@ -63,12 +63,12 @@ def test_typography_uses_system_faces_only():
 
 
 def test_the_console_is_served_by_the_api():
+    import tempfile
+    from pathlib import Path
+
     from fastapi.testclient import TestClient
 
     from crucible.api.main import create_app
-
-    import tempfile
-    from pathlib import Path
 
     client = TestClient(
         create_app(rules_path=REPO / "rules" / "cis", data_dir=Path(tempfile.mkdtemp()))

@@ -81,4 +81,4 @@ def utc_now_rfc3339() -> str:
     Fixed width matters: a variable number of fractional digits would make the
     same instant serialise two ways and break reproducibility.
     """
-    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

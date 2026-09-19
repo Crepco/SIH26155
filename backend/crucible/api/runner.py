@@ -88,7 +88,7 @@ class AuditJob:
 
 
 def _report_id(index: int, device_id: str) -> str:
-    stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%d")
+    stamp = _dt.datetime.now(_dt.UTC).strftime("%Y%m%d")
     slug = "".join(c for c in device_id.upper() if c.isalnum())[:12] or "DEVICE"
     return f"AUDIT-{stamp}-{slug}-{index:04d}"
 
@@ -175,9 +175,7 @@ def _write_artefacts(
 
     if "json" in formats:
         path = stem.with_suffix(".audit.json")
-        path.write_text(
-            json.dumps(report.to_dict(), indent=2, sort_keys=True), encoding="utf-8"
-        )
+        path.write_text(json.dumps(report.to_dict(), indent=2, sort_keys=True), encoding="utf-8")
         result.artefacts["json"] = str(path)
 
     if "md" in formats:

@@ -136,10 +136,10 @@ def parse_routeros(ctx: ParseContext) -> None:
             continue
 
         if command_path.startswith("/user"):
-            name = values.get("name")
-            if name:
+            user_name = values.get("name")
+            if user_name:
                 index = ctx.append(
-                    "aaa.local_users", {"name": name, "privilege": None, "hash": None}, number
+                    "aaa.local_users", {"name": user_name, "privilege": None, "hash": None}, number
                 )
                 ctx.set(f"aaa.local_users[{index}].hash", None, number)
                 continue

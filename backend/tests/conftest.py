@@ -9,7 +9,7 @@ so it is also the test target.
 from __future__ import annotations
 
 import sys
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 
 TESTS = Path(__file__).parent
@@ -29,7 +29,7 @@ def ruleset():  # type: ignore[no-untyped-def]
     return load_rules(RULES)
 
 
-@lru_cache(maxsize=None)
+@cache
 def parsed(device_id: str):  # type: ignore[no-untyped-def]
     """Parse one fixture device into a :class:`ParsedDevice`.
 

@@ -36,12 +36,12 @@ class SigningKey:
         self.key_id = key_id
 
     @classmethod
-    def generate(cls) -> "SigningKey":
+    def generate(cls) -> SigningKey:
         key = Ed25519PrivateKey.generate()
         return cls(key, _key_id(key.public_key()))
 
     @classmethod
-    def load(cls, path: str | Path) -> "SigningKey":
+    def load(cls, path: str | Path) -> SigningKey:
         data = Path(path).read_bytes()
         key = serialization.load_pem_private_key(data, password=None)
         if not isinstance(key, Ed25519PrivateKey):
@@ -68,7 +68,7 @@ class SigningKey:
     def sign(self, message: bytes) -> str:
         return self._key.sign(message).hex()
 
-    def verifying_key(self) -> "VerifyingKey":
+    def verifying_key(self) -> VerifyingKey:
         return VerifyingKey(self._key.public_key(), self.key_id)
 
     def public_pem(self) -> bytes:
@@ -88,7 +88,7 @@ class VerifyingKey:
         self.key_id = key_id
 
     @classmethod
-    def load(cls, path: str | Path) -> "VerifyingKey":
+    def load(cls, path: str | Path) -> VerifyingKey:
         key = serialization.load_pem_public_key(Path(path).read_bytes())
         if not isinstance(key, Ed25519PublicKey):
             raise LedgerError(f"{path} is not an Ed25519 public key")

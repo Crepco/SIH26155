@@ -9,8 +9,8 @@ adding a module look like the natural path.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Callable, Iterator
 
 from crucible.ingest.bundle import SourceFile
 from crucible.ir.builder import IRBuilder

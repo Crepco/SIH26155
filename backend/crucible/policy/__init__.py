@@ -12,11 +12,11 @@ from crucible.policy.expr import UNKNOWN, Expression, compile_expression
 from crucible.policy.ruleset import Rule, RuleSet, load_rules
 
 __all__ = [
+    "UNKNOWN",
     "DeviceEvaluation",
     "Expression",
     "Rule",
     "RuleSet",
-    "UNKNOWN",
     "compile_expression",
     "evaluate_device",
     "load_rules",

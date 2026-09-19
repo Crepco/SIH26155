@@ -27,4 +27,4 @@ IR_SCHEMA_VERSION = "1.0.0"
 # bumping this would silently invalidate historical verification.
 CANONICALISATION_VERSION = "1"
 
-__all__ = ["__version__", "IR_SCHEMA_VERSION", "CANONICALISATION_VERSION"]
+__all__ = ["CANONICALISATION_VERSION", "IR_SCHEMA_VERSION", "__version__"]

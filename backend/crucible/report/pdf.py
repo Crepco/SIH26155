@@ -69,12 +69,22 @@ def _styles() -> dict[str, ParagraphStyle]:
             "title", parent=base["Title"], fontSize=20, leading=24, textColor=INK, alignment=TA_LEFT
         ),
         "h2": ParagraphStyle(
-            "h2", parent=base["Heading2"], fontSize=12.5, leading=15, textColor=INK,
-            spaceBefore=14, spaceAfter=5,
+            "h2",
+            parent=base["Heading2"],
+            fontSize=12.5,
+            leading=15,
+            textColor=INK,
+            spaceBefore=14,
+            spaceAfter=5,
         ),
         "h3": ParagraphStyle(
-            "h3", parent=base["Heading3"], fontSize=10.5, leading=13, textColor=INK,
-            spaceBefore=9, spaceAfter=3,
+            "h3",
+            parent=base["Heading3"],
+            fontSize=10.5,
+            leading=13,
+            textColor=INK,
+            spaceBefore=9,
+            spaceAfter=3,
         ),
         "body": ParagraphStyle(
             "body", parent=base["BodyText"], fontSize=9, leading=12.5, textColor=INK
@@ -83,8 +93,14 @@ def _styles() -> dict[str, ParagraphStyle]:
             "muted", parent=base["BodyText"], fontSize=8, leading=11, textColor=MUTED
         ),
         "mono": ParagraphStyle(
-            "mono", parent=base["Code"], fontName="Courier", fontSize=7.6, leading=9.6,
-            textColor=INK, backColor=colors.HexColor("#F4F6F8"), borderPadding=4,
+            "mono",
+            parent=base["Code"],
+            fontName="Courier",
+            fontSize=7.6,
+            leading=9.6,
+            textColor=INK,
+            backColor=colors.HexColor("#F4F6F8"),
+            borderPadding=4,
         ),
     }
 
@@ -109,7 +125,8 @@ class _Doc(BaseDocTemplate):
         canvas.setFillColor(MUTED)
         canvas.drawString(18 * mm, A4[1] - 13 * mm, "CRUCIBLE - compliance you can prove")
         canvas.drawRightString(
-            A4[0] - 18 * mm, A4[1] - 13 * mm,
+            A4[0] - 18 * mm,
+            A4[1] - 13 * mm,
             f"{report.device.get('hostname') or report.device_id} - {report.report_id}",
         )
 
@@ -266,7 +283,9 @@ def render_pdf(report: AuditReport, path: str | Path) -> Path:
     story.append(Paragraph("4. Findings", style["h2"]))
     if not report.findings:
         story.append(
-            Paragraph("No findings. Every applicable control passed on parsed facts.", style["body"])
+            Paragraph(
+                "No findings. Every applicable control passed on parsed facts.", style["body"]
+            )
         )
 
     for finding in report.findings:
@@ -334,12 +353,12 @@ def render_pdf(report: AuditReport, path: str | Path) -> Path:
         )
         for phase, steps in report.plan.phases():
             story.append(Paragraph(f"Phase {phase} &mdash; {steps[0].phase_name}", style["h3"]))
-            lines = []
+            commands_block: list[str] = []
             for step in steps:
-                lines.append(f"! {step.rule_id} ({step.severity}) - {step.title}")
-                lines.extend(step.commands)
-                lines.append("!")
-            story.append(Preformatted("\n".join(lines), style["mono"]))
+                commands_block.append(f"! {step.rule_id} ({step.severity}) - {step.title}")
+                commands_block.extend(step.commands)
+                commands_block.append("!")
+            story.append(Preformatted("\n".join(commands_block), style["mono"]))
 
     if report.plan.unsupported:
         story.append(Spacer(1, 4))
@@ -371,9 +390,7 @@ def render_pdf(report: AuditReport, path: str | Path) -> Path:
     story.append(Paragraph("Appendix C &mdash; Uninterpreted lines", style["h2"]))
     sample = coverage.get("unparsed_sample") or []
     if not sample:
-        story.append(
-            Paragraph("Every line of every supplied file was interpreted.", style["body"])
-        )
+        story.append(Paragraph("Every line of every supplied file was interpreted.", style["body"]))
     else:
         story.append(
             Paragraph(

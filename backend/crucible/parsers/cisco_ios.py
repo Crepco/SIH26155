@@ -113,7 +113,7 @@ def _finish_interface(ctx: ParseContext, state: _State) -> None:
             ctx.set(
                 f"interfaces[{index}].{key}",
                 current[key],
-                int(current.pop(f"_{key}_line")),  # type: ignore[arg-type]
+                int(str(current.pop(f"_{key}_line"))),
             )
     for key in list(current):
         if isinstance(key, str) and key.startswith("_"):
@@ -494,7 +494,7 @@ def _in_block(
         match = _RE_ACL_ENTRY.match(text)
         if match:
             sequence, action, remainder = match.groups()
-            acls = ctx.builder._sections.get("acls", [])  # noqa: SLF001 - builder is ours
+            acls = ctx.builder._sections.get("acls", [])
             if acls:
                 acls[-1]["entries"].append(
                     {
@@ -562,10 +562,10 @@ def _resolve_management_plane(ctx: ParseContext, state: _State, dialect: str) ->
         # An ACL applied inbound on a management interface is the same control
         # by a different route, and a real deployment uses whichever the
         # platform prefers.
-        for interface in ctx.builder._sections.get("interfaces", []):  # noqa: SLF001
+        for interface in ctx.builder._sections.get("interfaces", []):
             if interface.get("is_mgmt") and interface.get("acl_in"):
-                provenance = ctx.builder._provenance  # noqa: SLF001
-                index = ctx.builder._sections["interfaces"].index(interface)  # noqa: SLF001
+                provenance = ctx.builder._provenance
+                index = ctx.builder._sections["interfaces"].index(interface)
                 source = provenance.get(f"interfaces[{index}].acl_in")
                 if source is not None:
                     ctx.set("mgmt.mgmt_acl", interface["acl_in"], source.line, claim=False)

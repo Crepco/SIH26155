@@ -16,7 +16,7 @@ from crucible.fingerprint.identity import extract_identity
 from crucible.ingest.bundle import DeviceBundle
 from crucible.ir.builder import IRBuilder
 
-__all__ = ["parse_identity", "claim_show_output"]
+__all__ = ["claim_show_output", "parse_identity"]
 
 
 def parse_identity(bundle: DeviceBundle, builder: IRBuilder) -> None:

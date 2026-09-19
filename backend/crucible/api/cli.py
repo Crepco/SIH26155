@@ -71,10 +71,11 @@ def _cmd_audit(args: argparse.Namespace) -> int:
         return _exit_code(job)
 
     print()
-    print(f"  CRUCIBLE {__version__}   rules: {job.ruleset_size} "
-          f"(digest {job.rule_set_digest})")
-    print(f"  {len(job.results)} device(s)   fleet score {job.fleet_score}%   "
-          f"mean coverage {job.mean_coverage}%")
+    print(f"  CRUCIBLE {__version__}   rules: {job.ruleset_size} (digest {job.rule_set_digest})")
+    print(
+        f"  {len(job.results)} device(s)   fleet score {job.fleet_score}%   "
+        f"mean coverage {job.mean_coverage}%"
+    )
     print()
 
     for result in job.results:
@@ -83,18 +84,27 @@ def _cmd_audit(args: argparse.Namespace) -> int:
         counts = report.evaluation.counts()
 
         print(f"  {device.get('hostname') or report.device_id}")
-        print(f"    {device.get('vendor', 'unknown')} {device.get('os') or ''} "
-              f"{device.get('version') or ''}"
-              f"{'  serial ' + device['serial'] if device.get('serial') else '  serial: not supplied'}")
-        print(f"    score  [{_bar(report.score)}] {report.score}%  "
-              f"-> {report.projected_score()}% after remediation")
-        print(f"    checks fail {counts['fail']}  unknown {counts['unknown']}  "
-              f"pass {counts['pass']}")
+        serial = device.get("serial")
+        serial_text = f"  serial {serial}" if serial else "  serial: not supplied"
+        print(
+            f"    {device.get('vendor', 'unknown')} {device.get('os') or ''} "
+            f"{device.get('version') or ''}{serial_text}"
+        )
+        print(
+            f"    score  [{_bar(report.score)}] {report.score}%  "
+            f"-> {report.projected_score()}% after remediation"
+        )
+        print(
+            f"    checks fail {counts['fail']}  unknown {counts['unknown']}  pass {counts['pass']}"
+        )
 
         coverage = report.coverage
-        print(f"    parsed {coverage['parsed_lines']:,}/{coverage['total_lines']:,} lines "
-              f"({round(100.0 * coverage['parsed_lines'] / coverage['total_lines'], 1) if coverage['total_lines'] else 0}%)"
-              f"  {coverage['unparsed_lines']} uninterpreted")
+        total = coverage["total_lines"]
+        percent = round(100.0 * coverage["parsed_lines"] / total, 1) if total else 0
+        print(
+            f"    parsed {coverage['parsed_lines']:,}/{total:,} lines ({percent}%)"
+            f"  {coverage['unparsed_lines']} uninterpreted"
+        )
 
         if not report.parser_applied:
             print("    NOTE: vendor not recognised - no parser applied, all controls UNKNOWN")
@@ -103,8 +113,10 @@ def _cmd_audit(args: argparse.Namespace) -> int:
         for finding in report.findings:
             if args.all or finding.severity.verifiable:
                 cite = finding.evidence[0].cite() if finding.evidence else "no line to cite"
-                print(f"      {_VERDICT_MARK[finding.verdict]} {finding.severity.value:8} "
-                      f"{finding.rule_id:14} {finding.title[:44]:<46} {cite}")
+                print(
+                    f"      {_VERDICT_MARK[finding.verdict]} {finding.severity.value:8} "
+                    f"{finding.rule_id:14} {finding.title[:44]:<46} {cite}"
+                )
                 shown += 1
         remaining = len(report.findings) - shown
         if remaining > 0:
@@ -161,12 +173,16 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     print()
 
     if ok:
-        print("  INTACT - every entry links to its predecessor"
-              f"{' and verifies against the issuing key' if key else ''}.")
+        print(
+            "  INTACT - every entry links to its predecessor"
+            f"{' and verifies against the issuing key' if key else ''}."
+        )
         print()
         for entry in ledger:
-            print(f"    {entry.seq:4}  {entry.timestamp}  {entry.device_id:24} "
-                  f"verify:{entry.verification_hash}")
+            print(
+                f"    {entry.seq:4}  {entry.timestamp}  {entry.device_id:24} "
+                f"verify:{entry.verification_hash}"
+            )
         print()
         return 0
 
@@ -211,15 +227,19 @@ def _cmd_show(args: argparse.Namespace) -> int:
 
         ir = parsed.ir
         print()
-        print(f"  {bundle.device_id}   {ir.vendor} {ir.device.get('os') or ''}   "
-              f"confidence {ir.device.get('fingerprint_confidence_bp', 0) / 100:.0f}%")
+        print(
+            f"  {bundle.device_id}   {ir.vendor} {ir.device.get('os') or ''}   "
+            f"confidence {ir.device.get('fingerprint_confidence_bp', 0) / 100:.0f}%"
+        )
         print(f"  {ir.coverage.statement()}")
         print()
         for path, provenance in sorted(ir.facts().items()):
             resolution = ir.resolve(path)
             value = resolution.value if resolution.found else "-"
-            print(f"    {path:34} = {str(value)[:28]:30} {provenance.file.split('/')[-1]}:"
-                  f"{provenance.line} (tier {provenance.tier})")
+            print(
+                f"    {path:34} = {str(value)[:28]:30} {provenance.file.split('/')[-1]}:"
+                f"{provenance.line} (tier {provenance.tier})"
+            )
         print()
         if ir.coverage.unparsed_sample:
             print("  uninterpreted:")
@@ -239,7 +259,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     audit = sub.add_parser("audit", help="audit one device or a directory of devices")
     audit.add_argument("target", help="config file, device directory, bundle directory or .zip")
-    audit.add_argument("--rules", default=DEFAULT_RULES, help=f"rule directory (default: {DEFAULT_RULES})")
+    audit.add_argument(
+        "--rules", default=DEFAULT_RULES, help=f"rule directory (default: {DEFAULT_RULES})"
+    )
     audit.add_argument("--out", help="write reports here; omit to print to the terminal only")
     audit.add_argument("--framework", help="filter rules by framework, e.g. CIS or STIG")
     audit.add_argument("--format", default="json,md,pdf", help="json,md,pdf,ir")

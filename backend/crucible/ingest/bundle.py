@@ -9,9 +9,10 @@ sanitised - a refusal is visible, and a silently sanitised name is not.
 from __future__ import annotations
 
 import zipfile
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from crucible.common.errors import IngestError, UnsafeArchiveError
 
@@ -20,12 +21,29 @@ __all__ = ["DeviceBundle", "SourceFile", "load"]
 #: Extensions we will read as text. Anything else in a bundle is ignored rather
 #: than guessed at.
 TEXT_SUFFIXES = {
-    ".cfg", ".conf", ".config", ".txt", ".log", ".xml", ".json", ".rsc", ".boot", ".set", ""
+    ".cfg",
+    ".conf",
+    ".config",
+    ".txt",
+    ".log",
+    ".xml",
+    ".json",
+    ".rsc",
+    ".boot",
+    ".set",
+    "",
 }
 
 #: Filename fragments that mark a file as command output rather than a running
 #: configuration. This is how the serial number gets found.
-SHOW_OUTPUT_MARKERS = ("show-version", "show_version", "showversion", "version", "inventory", "sysinfo")
+SHOW_OUTPUT_MARKERS = (
+    "show-version",
+    "show_version",
+    "showversion",
+    "version",
+    "inventory",
+    "sysinfo",
+)
 
 MAX_FILE_BYTES = 64 * 1024 * 1024
 MAX_ARCHIVE_MEMBERS = 2000
@@ -167,9 +185,7 @@ def _group_loose_files(paths: Iterable[Path], root: Path) -> list[DeviceBundle]:
             name = str(path.relative_to(root)).replace("\\", "/")
         except ValueError:
             name = path.name
-        bundle.files.append(
-            SourceFile(name=name, text=_read_text(path), role=_classify(path.name))
-        )
+        bundle.files.append(SourceFile(name=name, text=_read_text(path), role=_classify(path.name)))
     return list(groups.values())
 
 
@@ -200,7 +216,9 @@ def load(target: str | Path, *, workdir: Path | None = None) -> list[DeviceBundl
         return [
             DeviceBundle(
                 device_id=stem,
-                files=[SourceFile(name=path.name, text=_read_text(path), role=_classify(path.name))],
+                files=[
+                    SourceFile(name=path.name, text=_read_text(path), role=_classify(path.name))
+                ],
             )
         ]
 

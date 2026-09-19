@@ -42,10 +42,10 @@ def test_ssh_is_enabled_before_telnet_is_disabled():
     plan = build_plan(evaluation_for("cisco-ios-core-01").findings)
     commands = plan.flat_commands()
 
-    ssh_index = next(i for i, c in enumerate(commands) if "ip ssh" in c or "transport input ssh" in c)
-    telnet_index = next(
-        (i for i, c in enumerate(commands) if "no ip telnet" in c), len(commands)
+    ssh_index = next(
+        i for i, c in enumerate(commands) if "ip ssh" in c or "transport input ssh" in c
     )
+    telnet_index = next((i for i, c in enumerate(commands) if "no ip telnet" in c), len(commands))
     assert ssh_index < telnet_index, "Telnet is disabled before SSH is confirmed working"
 
 

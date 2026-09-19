@@ -18,7 +18,7 @@ __all__ = ["PARSERS", "Line", "ParseContext", "get_parser", "iter_lines"]
 
 # Importing the modules is what registers them. Kept at the bottom so the public
 # names above are bound before any parser module imports back into this package.
-from crucible.parsers import (  # noqa: E402,F401  (import for side effect)
+from crucible.parsers import (  # noqa: F401  (import for side effect)
     arista_eos,
     cisco_ios,
     fortios,

@@ -37,7 +37,7 @@ class Severity(enum.Enum):
         return self in (Severity.CRITICAL, Severity.HIGH)
 
     @classmethod
-    def parse(cls, raw: str) -> "Severity":
+    def parse(cls, raw: str) -> Severity:
         try:
             return cls(raw.strip().lower())
         except ValueError as exc:
@@ -61,7 +61,7 @@ class Verdict(enum.Enum):
     promoted to PASS.
     """
 
-    PASS = "pass"
+    PASS = "pass"  # noqa: S105  (a verdict, not a credential)
     FAIL = "fail"
     UNKNOWN = "unknown"
     NOT_APPLICABLE = "not_applicable"
@@ -160,7 +160,7 @@ class Evidence:
         ir_path: str,
         prov: Provenance,
         context: tuple[tuple[int, str, bool], ...] = (),
-    ) -> "Evidence":
+    ) -> Evidence:
         return cls(
             ir_path=ir_path,
             file=prov.file,
@@ -180,9 +180,7 @@ class Evidence:
             "line": self.line,
             "raw": self.raw,
             "tier": self.tier,
-            "context": [
-                {"line": n, "text": t, "cited": c} for n, t, c in self.context
-            ],
+            "context": [{"line": n, "text": t, "cited": c} for n, t, c in self.context],
         }
 
 

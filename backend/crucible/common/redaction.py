@@ -44,8 +44,8 @@ _SECRET_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
     (re.compile(r"(\bencrypted-password\s+)(\S+)", re.IGNORECASE), 2),
     (re.compile(r"(\bplain-text-password\s+)(\S+)", re.IGNORECASE), 2),
     # FortiOS
-    (re.compile(r'(\bset\s+passwd\s+)(\S+)', re.IGNORECASE), 2),
-    (re.compile(r'(\bset\s+psksecret\s+)(\S+)', re.IGNORECASE), 2),
+    (re.compile(r"(\bset\s+passwd\s+)(\S+)", re.IGNORECASE), 2),
+    (re.compile(r"(\bset\s+psksecret\s+)(\S+)", re.IGNORECASE), 2),
     # key=value grammars (RouterOS and friends), where the secret is glued to
     # its key with no whitespace for the patterns above to anchor on.
     (re.compile(r"(\bpassword=)(\S+)", re.IGNORECASE), 2),
@@ -88,9 +88,11 @@ def redact(line: str) -> str:
     """
     result = line
     for pattern, group in _SECRET_PATTERNS:
-        result = pattern.sub(
-            lambda m, g=group: m.group(0).replace(m.group(g), REDACTED, 1), result
-        )
+
+        def _mask(match: re.Match[str], group: int | str = group) -> str:
+            return match.group(0).replace(match.group(group), REDACTED, 1)
+
+        result = pattern.sub(_mask, result)
     return result
 
 

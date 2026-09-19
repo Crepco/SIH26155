@@ -27,9 +27,24 @@ DEFAULT_COMMUNITIES = {"public", "private", "juniper", "admin"}
 
 #: Statements we positively recognise as carrying no security posture.
 _KNOWN_IRRELEVANT = {
-    "version", "uid", "class", "authorization", "system-generated-certificate",
-    "rate-limit", "type", "peer-as", "neighbor", "accept", "log", "discard",
-    "then", "protocol", "destination-port", "unit", "family", "inet",
+    "version",
+    "uid",
+    "class",
+    "authorization",
+    "system-generated-certificate",
+    "rate-limit",
+    "type",
+    "peer-as",
+    "neighbor",
+    "accept",
+    "log",
+    "discard",
+    "then",
+    "protocol",
+    "destination-port",
+    "unit",
+    "family",
+    "inet",
 }
 
 
@@ -51,7 +66,11 @@ def parse_junos(ctx: ParseContext) -> None:
         for key in ("acl_in", "shutdown"):
             marker = f"_{key}_line"
             if interface.get(marker):
-                ctx.set(f"interfaces[{index}].{key}", interface.get(key), int(interface.pop(marker)))  # type: ignore[arg-type]
+                ctx.set(
+                    f"interfaces[{index}].{key}",
+                    interface.get(key),
+                    int(str(interface.pop(marker))),
+                )
         interface = None
 
     for line in ctx.lines():
@@ -66,7 +85,9 @@ def parse_junos(ctx: ParseContext) -> None:
             leaving = stack.pop() if stack else ""
             if len(stack) == 1 and stack[0] == "interfaces" and interface is not None:
                 flush_interface()
-            elif leaving.startswith("ge-") or leaving.startswith("xe-") or leaving.startswith("et-"):
+            elif (
+                leaving.startswith("ge-") or leaving.startswith("xe-") or leaving.startswith("et-")
+            ):
                 pass
             ctx.claim(number)
             continue
@@ -171,9 +192,7 @@ def parse_junos(ctx: ParseContext) -> None:
                 ctx.claim(number)
                 continue
             secret = statement.split(None, 1)[1].strip('"') if len(parts) > 1 else ""
-            algorithm = (
-                "plaintext" if head == "plain-text-password" else hash_algorithm_of(secret)
-            )
+            algorithm = "plaintext" if head == "plain-text-password" else hash_algorithm_of(secret)
             index = ctx.append(
                 "aaa.local_users",
                 {"name": account, "privilege": None, "hash": algorithm},

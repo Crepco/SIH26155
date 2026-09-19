@@ -17,9 +17,10 @@ properties a database would have taken away for no benefit here.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from crucible import CANONICALISATION_VERSION
 from crucible.common.canonical import canonical_bytes, sha256_hex, utc_now_rfc3339
@@ -72,7 +73,7 @@ class LedgerEntry:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "LedgerEntry":
+    def from_dict(cls, data: dict[str, Any]) -> LedgerEntry:
         return cls(
             seq=int(data["seq"]),
             timestamp=str(data["timestamp"]),
@@ -105,7 +106,7 @@ class Ledger:
     entries: list[LedgerEntry] = field(default_factory=list)
 
     @classmethod
-    def open(cls, path: str | Path) -> "Ledger":
+    def open(cls, path: str | Path) -> Ledger:
         target = Path(path)
         ledger = cls(path=target)
         if target.exists():
@@ -115,7 +116,9 @@ class Ledger:
                 try:
                     ledger.entries.append(LedgerEntry.from_dict(json.loads(raw)))
                 except (json.JSONDecodeError, KeyError) as exc:
-                    raise LedgerError(f"{target}:{number} is not a valid ledger entry: {exc}") from exc
+                    raise LedgerError(
+                        f"{target}:{number} is not a valid ledger entry: {exc}"
+                    ) from exc
         return ledger
 
     @property

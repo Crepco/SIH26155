@@ -115,7 +115,9 @@ def test_framework_selection_regroups_without_reparsing():
     standard the findings are grouped under.
     """
     full = run_audit(DEVICES, rules_path=RULES, output_dir=_out(), formats=("json",))
-    cis = run_audit(DEVICES, rules_path=RULES, output_dir=_out(), formats=("json",), framework="CIS")
+    cis = run_audit(
+        DEVICES, rules_path=RULES, output_dir=_out(), formats=("json",), framework="CIS"
+    )
     stig = run_audit(
         DEVICES, rules_path=RULES, output_dir=_out(), formats=("json",), framework="STIG"
     )
@@ -158,9 +160,7 @@ def test_cli_exit_code_signals_findings_not_crashes():
     from crucible.api.cli import main
 
     output = _out()
-    code = main(
-        ["audit", str(DEVICES), "--rules", str(RULES), "--out", str(output), "--json"]
-    )
+    code = main(["audit", str(DEVICES), "--rules", str(RULES), "--out", str(output), "--json"])
     assert code == 1, "fixtures contain critical failures; exit code should say so"
 
     code = main(["audit", str(output / "nope"), "--rules", str(RULES)])
