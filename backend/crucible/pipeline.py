@@ -53,6 +53,9 @@ class ParsedDevice:
     structure: dict[str, StructureReport] = field(default_factory=dict)
     #: Which adapter packs contributed, and what each did.
     packs: list[PackApplication] = field(default_factory=list)
+    #: Every line no tier claimed, per file. The report lists at most a sample;
+    #: training needs all of them.
+    unclaimed: dict[str, list[int]] = field(default_factory=dict)
 
     @property
     def device_id(self) -> str:
@@ -137,8 +140,6 @@ def build_ir(
     structure: dict[str, StructureReport] = {}
     applications: list[PackApplication] = []
     matching = packs_for(available, identity.vendor, identity.os) if identity.recognised else []
-    if not matching and not identity.recognised:
-        matching = [p for p in available if p.vendor == identity.vendor]
     for source in bundle.configs:
         report = analyse(source.name, source.lines)
         structure[source.name] = report
@@ -148,6 +149,7 @@ def build_ir(
             applications.append(apply_pack(pack, builder, source.name, source.lines, report))
         claim_structural(builder, report)
 
+    unclaimed = {name: builder.unclaimed(name) for name in builder.files()}
     return ParsedDevice(
         ir=builder.build(),
         identity=identity,
@@ -155,4 +157,5 @@ def build_ir(
         parser_applied=parser is not None,
         structure=structure,
         packs=applications,
+        unclaimed=unclaimed,
     )

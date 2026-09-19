@@ -8,7 +8,9 @@ so it is also the test target.
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from functools import cache, lru_cache
 from pathlib import Path
 
@@ -20,6 +22,10 @@ RULES = REPO / "rules" / "cis"
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+# Tests never touch the operator's real deployment state: installed packs and
+# trusted publishers in ~/.crucible would otherwise change audit results.
+os.environ["CRUCIBLE_HOME"] = tempfile.mkdtemp(prefix="crucible-test-home-")
 
 
 @lru_cache(maxsize=1)
