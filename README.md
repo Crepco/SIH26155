@@ -77,8 +77,8 @@ cd SIH26155
 python -m pip install -r backend/requirements.txt
 ```
 
-This installs six small packages (PyYAML, ReportLab, cryptography, FastAPI, Uvicorn,
-python-multipart). A virtual environment is optional but recommended:
+This installs a handful of small packages: PyYAML, ReportLab, cryptography, FastAPI, Uvicorn,
+python-multipart, and httpx (used only by the tests). A virtual environment is optional but recommended:
 
 ```bash
 python -m venv .venv

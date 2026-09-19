@@ -10,7 +10,8 @@ plan in [docs/12-execution-plan.md](docs/12-execution-plan.md).
 - **Audit console** served by the API at `/`: plain HTML/CSS/JS with the evidence gutter, coverage
   and three-state filters, and a test that fails if any asset reaches off the host.
 - `backend/requirements.txt` with only what the current build needs, including `python-multipart`,
-  which FastAPI requires for uploads and the old one-line install left out.
+  which FastAPI requires for uploads, and `httpx` for the API tests. The old one-line install
+  left both out.
 - Submission artefacts in `docs/submission/`: a two-page architecture document (PDF and Markdown)
   and the two-minute demo video script.
 
