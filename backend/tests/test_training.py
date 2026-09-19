@@ -171,8 +171,10 @@ def test_an_unreachable_model_falls_back_to_the_lexical_proposer():
 
 def test_the_residue_is_grouped_into_families_with_proposals():
     session = _vrp_session()
-    keys = [f.key for f in session.families]
-    assert any(k.startswith("snmp-agent community read") for k in keys)
+    samples = [f.display[0] for f in session.families]
+    assert "snmp-agent community read <redacted>" in samples
+    assert not any("public" in s for s in samples)
+    assert not any("$1a$" in s for s in samples), "a credential hash reached the display"
     telnet = next(f for f in session.families if f.texts[0] == "telnet server enable")
     assert telnet.proposal is not None
     assert telnet.proposal.ir_path == "mgmt.telnet_enabled"

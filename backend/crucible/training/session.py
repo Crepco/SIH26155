@@ -30,7 +30,9 @@ from crucible.adapters.apply import match_line
 from crucible.adapters.pack import AdapterPack, Mapping
 from crucible.adapters.transforms import TransformError, apply_transform
 from crucible.cascade.structure import NodeKind, StructureReport
+from crucible.common.canonical import sha256_hex
 from crucible.common.errors import PackError
+from crucible.common.redaction import redact
 from crucible.ingest.bundle import DeviceBundle
 from crucible.ledger.signing import SigningKey
 from crucible.pipeline import ParsedDevice, build_ir
@@ -48,10 +50,14 @@ DEFAULT_ACCEPT_ABOVE = 0.85
 class Family:
     """Uninterpreted lines that share one shape."""
 
+    #: Opaque id. Never derived text: a raw literal must not reach a browser.
     key: str
     file: str
     lines: list[int] = field(default_factory=list)
+    #: Raw text, for the proposer only. Held in memory, never serialised.
     texts: list[str] = field(default_factory=list)
+    #: Redacted text, for display.
+    display: list[str] = field(default_factory=list)
     context: tuple[str, ...] = ()
     proposal: Proposal | None = None
 
@@ -60,9 +66,9 @@ class Family:
             "key": self.key,
             "file": self.file,
             "lines": self.lines,
-            "samples": self.texts[:5],
+            "samples": self.display[:5],
             "count": len(self.lines),
-            "context": list(self.context),
+            "context": [redact(c) for c in self.context],
             "proposal": self.proposal.to_dict() if self.proposal else None,
         }
 
@@ -123,10 +129,12 @@ class TrainingSession:
                 key = (name, _shape(node.text), tuple(_shape(c) for c in context))
                 family = families.get(key)
                 if family is None:
-                    family = Family(key=" | ".join([key[1], *key[2]]), file=name, context=context)
+                    digest = sha256_hex("|".join([name, key[1], *key[2]]))[:12]
+                    family = Family(key=digest, file=name, context=context)
                     families[key] = family
                 family.lines.append(node.line)
                 family.texts.append(node.text)
+                family.display.append(_redacted_line(self.device, name, node.line, "<redacted>"))
         ordered = sorted(families.values(), key=lambda f: (f.file, f.lines[0]))
         for family in ordered:
             family.proposal = self.proposer.propose(family.texts[0], family.context)
@@ -322,7 +330,7 @@ def families_text(families: Sequence[Family]) -> str:
     rows = []
     for family in families:
         proposal = family.proposal
-        head = f"  {family.lines[0]:>4}  x{len(family.lines):<3} {family.texts[0][:60]}"
+        head = f"  {family.lines[0]:>4}  x{len(family.lines):<3} {family.display[0][:60]}"
         if proposal:
             head += (
                 f"\n        -> {proposal.ir_path}  ({proposal.confidence:.2f}, "

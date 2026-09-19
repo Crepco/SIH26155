@@ -49,6 +49,12 @@ _SECRET_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
         ),
         2,
     ),
+    # Credential material wherever it sits on the line. VRP writes
+    # "password irreversible-cipher $1a$...": the password pattern above masks
+    # the word after "password", which there is the algorithm, not the hash.
+    (re.compile(r"(^|\s)(\$\d+[a-z]?\$\S+)", re.IGNORECASE), 2),
+    (re.compile(r"(\bcipher\s+)(\S+)", re.IGNORECASE), 2),
+    (re.compile(r"(%\^%#)(\S+?)(?=%\^%#)"), 2),
     # Keys and shared secrets
     (re.compile(r"(\bkey\s+\d\s+)(\S+)", re.IGNORECASE), 2),
     (re.compile(r"(\bpre-shared-key\s+)(\S+)", re.IGNORECASE), 2),
