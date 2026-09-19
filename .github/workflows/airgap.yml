@@ -40,7 +40,9 @@ jobs:
       - name: Fail on external asset hosts referenced in source
         run: |
           if grep -rniE "(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)" \
-               frontend backend --include="*.ts" --include="*.tsx" --include="*.js" --include="*.css" --include="*.html" --include="*.py" 2>/dev/null; then
+               frontend backend --include="*.ts" --include="*.tsx" --include="*.js" --include="*.css" --include="*.html" --include="*.py"                --exclude-dir=tests 2>/dev/null; then
+            # tests/ is excluded because test_console.py holds this same blocklist
+            # in order to enforce it on every asset the console ships.
             echo "::error::An external asset host is referenced. Bundle it instead. See docs/11-air-gap.md."
             exit 1
           fi

@@ -74,11 +74,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Deliberately minimal. The suite runs on the standard library plus the
-      # three packages the pipeline itself needs, because the deployment target
-      # is a machine with nothing else on it - so that is what CI proves.
+      # Deliberately minimal: exactly backend/requirements.txt, which is what an
+      # evaluator installs. The deployment target is a machine with nothing else
+      # on it, so that is what CI proves.
       - name: Install runtime dependencies only
-        run: pip install pyyaml reportlab cryptography
+        run: pip install -r backend/requirements.txt
 
       - name: Run the suite with no test framework installed
         working-directory: backend
@@ -100,7 +100,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install runtime dependencies
-        run: pip install pyyaml reportlab cryptography
+        run: pip install -r backend/requirements.txt
 
       - name: Audit the bundled fixtures
         working-directory: backend
@@ -123,27 +123,19 @@ jobs:
           test -s reports/cisco-ios-core-01.pdf
           head -c 4 reports/cisco-ios-core-01.pdf | grep -q "%PDF"
 
-  frontend:
-    name: Frontend build
+  console:
+    name: Console is self-contained
     runs-on: ubuntu-latest
+    # The audit console and training GUI are plain HTML/CSS/JS served by the
+    # API (ADR 0007). There is no build step to run, so this job proves the
+    # property that matters instead: nothing on the page reaches off the host.
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: "20"
-
-      - name: Install
-        working-directory: frontend
-        run: npm ci
-
-      - name: Typecheck
-        working-directory: frontend
-        run: npm run typecheck
-
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-
-      - name: No external asset references in build output
-        working-directory: frontend
-        run: npm run check:offline
+          python-version: "3.11"
+      - name: Install runtime dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Console asset and serving tests
+        working-directory: backend
+        run: python tests/run_tests.py console
