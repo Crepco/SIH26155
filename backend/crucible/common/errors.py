@@ -44,3 +44,19 @@ class RuleError(CrucibleError):
 
 class LedgerError(CrucibleError):
     """The audit ledger is inconsistent, or a signature did not verify."""
+
+
+class PackError(CrucibleError):
+    """An adapter pack is malformed, unsigned, untrusted or leaks customer data.
+
+    Always a refusal, never a warning: a pack decides how a line of a
+    critical-infrastructure configuration is interpreted.
+    """
+
+
+class SandboxError(CrucibleError):
+    """A twin could not be booted, configured or probed.
+
+    Every sandbox failure degrades the finding to ASSERTED. It can never become
+    a false DEMONSTRATED, and it can never become a pass.
+    """

@@ -94,6 +94,22 @@ class VerifyingKey:
             raise LedgerError(f"{path} is not an Ed25519 public key")
         return cls(key, _key_id(key))
 
+    @classmethod
+    def from_pem(cls, pem: bytes) -> VerifyingKey:
+        try:
+            key = serialization.load_pem_public_key(pem)
+        except ValueError as exc:
+            raise LedgerError(f"not a PEM public key: {exc}") from exc
+        if not isinstance(key, Ed25519PublicKey):
+            raise LedgerError("only Ed25519 public keys are accepted")
+        return cls(key, _key_id(key))
+
+    def public_pem(self) -> bytes:
+        return self._key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+
     def verify(self, message: bytes, signature: str) -> bool:
         try:
             self._key.verify(bytes.fromhex(signature), message)

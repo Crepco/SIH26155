@@ -28,8 +28,13 @@ ROOT = TESTS_DIR.parent
 class _Raises:
     """Minimal stand-in for ``pytest.raises`` as a context manager."""
 
-    def __init__(self, expected: type[BaseException] | tuple[type[BaseException], ...]) -> None:
+    def __init__(
+        self,
+        expected: type[BaseException] | tuple[type[BaseException], ...],
+        match: str | None = None,
+    ) -> None:
         self.expected = expected
+        self.match = match
         self.value: BaseException | None = None
 
     def __enter__(self) -> _Raises:
@@ -41,6 +46,11 @@ class _Raises:
             raise AssertionError(f"expected {names} but nothing was raised")
         if not issubclass(exc_type, self.expected):  # type: ignore[arg-type]
             return False
+        if self.match is not None:
+            import re
+
+            if not re.search(self.match, str(exc)):
+                raise AssertionError(f"{exc!r} does not match {self.match!r}")
         self.value = exc
         return True
 

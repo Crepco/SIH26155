@@ -141,5 +141,8 @@ source_modules = [
   "crucible.parsers",
   "crucible.policy",
   "crucible.ir",
+  "crucible.cascade",
+  "crucible.adapters",
+  "crucible.pipeline",
 ]
 forbidden_modules = ["crucible.training"]
