@@ -2,9 +2,13 @@
 
 FastAPI service. Everything from an uploaded file to a signed PDF.
 
-**Status: Phase 1 complete.** `ingest`, `fingerprint`, `parsers`, `ir`, `policy`, `report`, `ledger` and
-`api` are implemented and covered by 101 tests (`python tests/run_tests.py`). `training`, `graph` and
-`sandbox` are specified only; they are Phases 2 to 4. To run it, see the setup section of the
+**Status: Phases 1 to 5 complete.** Every package here is implemented and covered by 224 tests
+(`python tests/run_tests.py`, no pytest required) — `ingest`, `fingerprint`, `parsers`, `ir`,
+`policy`, `report`, `ledger`, `api`, `training`, `graph`, `sandbox` and `validation`. The one
+package that needs anything beyond the seven runtime dependencies is `sandbox`, which boots a
+container twin and so needs a Docker daemon; without one, findings stay `ASSERTED`.
+
+To run it, see the setup section of the
 [top-level README](../README.md#setup-five-minutes-no-internet-needed-after-install).
 
 ## Package layout
@@ -19,9 +23,11 @@ FastAPI service. Everything from an uploaded file to a signed PDF.
                     confidence scoring, adapter pack export and import        [2]
       policy/       rule loading, expression evaluator, XCCDF importer        [4]
       graph/        fleet graph construction and cross-device correlation     [5]
-      report/       PDF generation, remediation rendering, what-if projection [6]
+      report/       PDF generation, remediation rendering, what-if projection,
+                    drift between two audits of one device                    [6]
       ledger/       Merkle trees, hash chaining, Ed25519 signing              [6]
-      sandbox/      Crucible: VyOS renderer, containerlab harness, probes     [7]
+      sandbox/      Crucible: twin spec, Docker harness, stdlib probes        [7]
+      validation/   labelled ground truth, precision and recall
       api/          HTTP surface, job submission, streaming progress
 
 Numbers map to the pipeline stages in [docs/02-architecture.md](../docs/02-architecture.md).
@@ -53,11 +59,19 @@ is enforced by an import-linter check in CI rather than by good intentions.
 
 ## Testing
 
-| Directory | Contents |
-|-----------|----------|
-| `tests/unit/` | Per-module. Fast, no containers, no model |
-| `tests/integration/` | Full pipeline against real corpus files. Runs egress-blocked |
-| `tests/fixtures/` | Small, checked-in configuration excerpts. Real device data lives in `corpus/`, not here |
+`python tests/run_tests.py` runs everything with no test framework installed, which is what the
+offline bundle relies on. `pytest` works too, and takes markers: `pytest -m "not sandbox"` skips
+the tests that need a Docker daemon. A bare module name runs one file's tests:
+`python tests/run_tests.py training`.
+
+| Path | Contents |
+|------|----------|
+| `tests/test_*.py` | One file per area, named for what it protects rather than for a layer |
+| `tests/fixtures/` | Small, checked-in configuration excerpts, six devices across six vendors |
+| `tests/fixtures/xccdf/` | Real DISA benchmark excerpts, for the importer |
+
+Real device data lives in `corpus/`, not here, and the labels behind the accuracy numbers are in
+`corpus/labels/`.
 
 Two invariants are asserted on every fixture in every run, because they are the two that fail
 silently: `parsed_lines + unparsed_lines == total_lines`, and no finding exists without
