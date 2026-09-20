@@ -1,0 +1,70 @@
+# Ground truth for the shipped Cisco IOS fixture.
+# Labelled from the configuration and the control text, not from tool output.
+config_id: cisco-ios-core-01
+labelled_by: "claude-opus-5 (AI-assisted, awaiting human review)"
+labelled_on: 2026-09-20
+
+ir_facts:
+  mgmt.telnet_enabled:
+    value: true
+    line: 102          # transport input telnet ssh
+  mgmt.ssh.enabled:
+    value: true
+    line: 102
+  mgmt.ssh.version:
+    value: 2
+    line: 34           # ip ssh version 2
+  mgmt.idle_timeout_min:
+    value: 30
+    line: 101          # exec-timeout 30 0 on vty 0 4
+  mgmt.http_enabled:
+    value: true
+    line: 39           # ip http server
+  mgmt.https_enabled:
+    value: false
+    line: 40           # no ip http secure-server
+  mgmt.mgmt_acl:
+    value: MGMT_IN
+    line: 72           # ip access-group MGMT_IN in, on Vlan900
+  mgmt.login_banner:
+    value: true
+    line: 93
+  snmp.version:
+    value: 2
+    line: 89           # snmp-server host ... version 2c
+  logging.servers:
+    value: ["10.0.0.5"]
+    line: 84
+  ntp.servers:
+    value: ["10.0.0.1"]
+    line: 91
+  aaa.enabled:
+    value: true
+    line: 20           # aaa new-model
+  aaa.servers:
+    value: ["10.0.0.20"]
+    line: 27
+  aaa.accounting:
+    value: true
+    line: 24
+
+expected_verdicts:
+  CIS-NET-1.1.1: fail    # telnet is an accepted transport on both vty ranges
+  CIS-NET-1.1.2: pass    # ssh enabled, version 2 explicitly
+  CIS-NET-1.2.4: fail    # 30 minutes
+  CIS-NET-1.3.1: fail    # ip http server
+  CIS-NET-1.4.1: pass    # MGMT_IN applied inbound on the management SVI
+  CIS-NET-2.1.1: fail    # v2c communities
+  CIS-NET-2.1.2: fail    # "public"
+  CIS-NET-3.1.1: pass    # logging host 10.0.0.5
+  CIS-NET-4.1.1: fail    # ntp server with no authentication; IOS default is off
+  CIS-NET-5.1.1: pass    # aaa new-model with a tacacs+ server
+  CIS-NET-5.2.1: fail    # username backup password 7 (reversible)
+  CIS-NET-5.3.1: unknown # the configuration says nothing about SSH kex
+  CIS-NET-6.1.1: fail    # Gi0/1 and Gi0/2 carry user traffic with no inbound ACL
+
+notes: >
+  MGMT_IN permits tcp/23 from any before its deny, so the ACL exists and is
+  applied but does not restrict Telnet. CIS-NET-1.4.1 asks only whether a
+  management ACL is applied, so it passes; the shadowed-permit problem is a
+  fleet-level finding, not this control.

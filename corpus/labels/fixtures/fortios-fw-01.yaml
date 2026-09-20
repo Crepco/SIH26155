@@ -1,0 +1,43 @@
+config_id: fortios-fw-01
+labelled_by: "claude-opus-5 (AI-assisted, awaiting human review)"
+labelled_on: 2026-09-20
+
+ir_facts:
+  mgmt.telnet_enabled:
+    value: true
+    line: 7            # set admin-telnet enable
+  mgmt.ssh.enabled:
+    value: true
+    line: 18           # allowaccess includes ssh
+  mgmt.ssh.version:
+    value: 2
+    line: 8            # set admin-ssh-v1 disable
+  mgmt.idle_timeout_min:
+    value: 30
+    line: 6
+  logging.servers:
+    value: ["10.0.0.5"]
+    line: 57
+  ntp.servers:
+    value: ["10.0.0.1"]
+    line: 66
+
+expected_verdicts:
+  CIS-NET-1.1.1: fail
+  CIS-NET-1.1.2: pass    # ssh reachable, v1 disabled
+  CIS-NET-1.2.4: fail    # admintimeout 30
+  CIS-NET-1.3.1: unknown # allowaccess lists https only; plain http is never mentioned
+  CIS-NET-1.4.1: fail    # no trusthost on any admin
+  CIS-NET-2.1.1: fail    # v1 query enabled on the community
+  CIS-NET-2.1.2: fail    # "public"
+  CIS-NET-3.1.1: pass
+  CIS-NET-4.1.1: fail    # ntpsync with no authentication
+  CIS-NET-5.1.1: fail    # local admin only
+  CIS-NET-5.2.1: unknown # "ENC SH2..." discloses no algorithm an auditor can name
+  CIS-NET-5.3.1: unknown
+  CIS-NET-6.1.1: fail    # port1 faces the internet with no inbound policy in this export
+
+notes: >
+  Policy 2 permits any source to port2, the management interface. That is a
+  fleet-level exposure rather than a device control, and it is why the fleet
+  graph finds a path into the management segment through this firewall.

@@ -29,6 +29,26 @@ reason we can quote a number instead of a claim.
       Mixed indentation in the vty block. Two ACL entries where the second is
       shadowed by the first. Deliberately kept in the corpus for that reason.
 
+## What is labelled today
+
+`fixtures/` labels the six configurations shipped in
+`backend/tests/fixtures/devices`, so `crucible validate` produces a number on a
+clean clone with no corpus:
+
+```bash
+crucible validate --labels corpus/labels/fixtures --devices backend/tests/fixtures/devices --all
+```
+
+Those labels were written from the configurations and the control text by an AI
+assistant and **have not been reviewed by a person**. Every report says so, and
+the number must be quoted that way or not at all. Rule 2 below - two people per
+file - is what turns them into ground truth, and it has not happened yet.
+
+They have already earned their place: the first run against them found a rule
+whose assertion was stricter than its own title, an Arista eAPI reading that
+failed a correctly configured device, and four controls answered UNKNOWN where
+the file did in fact decide them.
+
 ## Labelling rules
 
 1. **Label from the file, not from the tool.** If you run the auditor first and then label, the

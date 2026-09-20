@@ -1,0 +1,46 @@
+config_id: routeros-branch-01
+labelled_by: "claude-opus-5 (AI-assisted, awaiting human review)"
+labelled_on: 2026-09-20
+
+ir_facts:
+  mgmt.telnet_enabled:
+    value: true
+    line: 12
+  mgmt.ssh.enabled:
+    value: true
+    line: 15
+  mgmt.http_enabled:
+    value: true
+    line: 14           # www disabled=no
+  mgmt.https_enabled:
+    value: false
+    line: 16           # www-ssl disabled=yes
+  mgmt.mgmt_acl:
+    value: input-chain
+    line: 20           # input chain permits ssh from one prefix, then drops
+  logging.servers:
+    value: ["10.0.0.5"]
+    line: 27
+  ntp.servers:
+    value: ["10.0.0.1"]
+    line: 26
+
+expected_verdicts:
+  CIS-NET-1.1.1: fail
+  CIS-NET-1.1.2: unknown # ssh is enabled; RouterOS never states a protocol version
+  CIS-NET-1.2.4: unknown # no session timeout appears in the export
+  CIS-NET-1.3.1: fail    # the www service is enabled
+  CIS-NET-1.4.1: pass    # the input chain restricts who may reach the router
+  CIS-NET-2.1.1: fail
+  CIS-NET-2.1.2: fail    # "public"
+  CIS-NET-3.1.1: pass
+  CIS-NET-4.1.1: fail    # ntp client with no authentication
+  CIS-NET-5.1.1: fail    # local users only
+  CIS-NET-5.2.1: unknown # an export discloses no password hash at all
+  CIS-NET-5.3.1: unknown
+  CIS-NET-6.1.1: fail    # neither interface applies an inbound filter to transit traffic
+
+notes: >
+  MikroTik is the held-out vendor. This label was written from the export and
+  the RouterOS command reference, and is used to measure the Tier-2 proposer
+  as well as the parser.

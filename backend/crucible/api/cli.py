@@ -11,6 +11,7 @@
     crucible trust list | add publisher.pub | remove KEYID | key
     crucible tier2-eval tests/fixtures/devices/routeros-branch-01
     crucible stig-import U_Cisco_NDM_STIG.zip --bindings rules/stig/bindings/cisco.yaml
+    crucible validate --labels corpus/labels/fixtures --devices tests/fixtures/devices
 
 Exit codes are meaningful, because this is a tool that belongs in a pipeline:
 
@@ -527,6 +528,47 @@ def _cmd_stig_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_validate(args: argparse.Namespace) -> int:
+    """Measure the tool against hand-labelled ground truth, and print the number."""
+    from crucible.policy.ruleset import load_rules
+    from crucible.validation import load_labels, validate
+
+    labels = load_labels(args.labels)
+    report = validate(labels, load_rules(args.rules), devices_root=args.devices)
+
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+        return 0
+
+    print(report.text())
+    if args.all:
+        for device in report.devices:
+            if not device.disagreements:
+                continue
+            print(f"  {device.config_id}")
+            for item in device.disagreements:
+                if "rule_id" in item:
+                    print(
+                        f"      {item['rule_id']:14} labelled {item['expected']:8}"
+                        f" reported {item['reported']}"
+                    )
+                elif "expected_line" in item:
+                    print(
+                        f"      {item['ir_path']:28} cited line {item['reported_line']}"
+                        f", labeller cited {item['expected_line']}"
+                    )
+                else:
+                    print(
+                        f"      {item['ir_path']:28} labelled {item['expected']!r},"
+                        f" read {item['reported']!r}"
+                    )
+            print()
+    else:
+        print("  (--all lists every disagreement, which is where the work is)")
+        print()
+    return 0
+
+
 def _add_learning_options(command: argparse.ArgumentParser) -> None:
     command.add_argument(
         "--hold-out",
@@ -599,6 +641,16 @@ def _register_learning(sub: argparse._SubParsersAction[argparse.ArgumentParser])
     )
     stig.add_argument("--out", help="write the imported rules here (catalogue written beside it)")
     stig.set_defaults(func=_cmd_stig_import)
+
+    validate_cmd = sub.add_parser(
+        "validate", help="measure precision and recall against hand-labelled configurations"
+    )
+    validate_cmd.add_argument("--labels", required=True, help="a label file or a directory")
+    validate_cmd.add_argument("--devices", required=True, help="the configurations they label")
+    validate_cmd.add_argument("--rules", default=DEFAULT_RULES)
+    validate_cmd.add_argument("--all", action="store_true", help="list every disagreement")
+    validate_cmd.add_argument("--json", action="store_true")
+    validate_cmd.set_defaults(func=_cmd_validate)
 
 
 def build_parser() -> argparse.ArgumentParser:

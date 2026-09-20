@@ -1,0 +1,53 @@
+config_id: arista-leaf-01
+labelled_by: "claude-opus-5 (AI-assisted, awaiting human review)"
+labelled_on: 2026-09-20
+
+ir_facts:
+  mgmt.telnet_enabled:
+    value: false
+    line: 24           # management telnet / shutdown
+  mgmt.ssh.enabled:
+    value: true
+    line: 19           # management ssh, not shut down
+  mgmt.idle_timeout_min:
+    value: 10
+    line: 20
+  mgmt.mgmt_acl:
+    value: null        # nothing restricts the management plane
+    line: null
+  logging.servers:
+    value: ["10.0.0.5"]
+    line: 61
+  ntp.authenticated:
+    value: true
+    line: 64           # ntp authenticate, with a trusted key on the server
+  ntp.servers:
+    value: ["10.0.0.1"]
+    line: 67
+  aaa.enabled:
+    value: true
+    line: 26
+  aaa.servers:
+    value: ["10.0.0.20"]
+    line: 29
+
+expected_verdicts:
+  CIS-NET-1.1.1: pass    # telnet explicitly shut down
+  CIS-NET-1.1.2: unknown # ssh is on, but the version is never stated
+  CIS-NET-1.2.4: pass    # idle-timeout 10
+  CIS-NET-1.3.1: unknown # eAPI is enabled, but the protocol is not stated
+  CIS-NET-1.4.1: fail    # no management ACL
+  CIS-NET-2.1.1: fail    # a community implies v1/v2c
+  CIS-NET-2.1.2: pass    # "observability" is not a default community
+  CIS-NET-3.1.1: pass
+  CIS-NET-4.1.1: pass    # ntp authenticate with a trusted key
+  CIS-NET-5.1.1: pass
+  CIS-NET-5.2.1: pass    # sha512
+  CIS-NET-5.3.1: unknown
+  CIS-NET-6.1.1: fail    # Ethernet1 is a user-carrying trunk with no inbound ACL
+
+notes: >
+  CIS-NET-1.3.1 is deliberately labelled unknown. "management api
+  http-commands" with "no shutdown" enables the eAPI, but EOS serves it over
+  HTTPS unless "protocol http" is configured, and this configuration does not
+  say. An auditor cannot decide from this file, so neither should the tool.

@@ -1,0 +1,51 @@
+config_id: junos-edge-01
+labelled_by: "claude-opus-5 (AI-assisted, awaiting human review)"
+labelled_on: 2026-09-20
+
+ir_facts:
+  mgmt.telnet_enabled:
+    value: false
+    line: 18           # system services lists ssh and web-management only
+  mgmt.ssh.enabled:
+    value: true
+    line: 19
+  mgmt.ssh.version:
+    value: 2
+    line: 20
+  mgmt.idle_timeout_min:
+    value: 10
+    line: 9
+  mgmt.http_enabled:
+    value: false
+    line: 25           # web-management offers https only
+  mgmt.https_enabled:
+    value: true
+    line: 25
+  logging.servers:
+    value: ["10.0.0.5"]
+    line: 31
+  ntp.servers:
+    value: ["10.0.0.1"]
+    line: 39
+
+expected_verdicts:
+  CIS-NET-1.1.1: pass    # telnet is absent from system services, so it is not running
+  CIS-NET-1.1.2: pass
+  CIS-NET-1.2.4: pass
+  CIS-NET-1.3.1: pass
+  CIS-NET-1.4.1: fail    # CORE_IN filters one interface; the management plane itself is open
+  CIS-NET-2.1.1: fail
+  CIS-NET-2.1.2: fail    # community "public"
+  CIS-NET-3.1.1: pass
+  CIS-NET-4.1.1: fail    # ntp server with no authentication key
+  CIS-NET-5.1.1: fail    # no tacacs or radius server: local accounts only
+  CIS-NET-5.2.1: pass    # both accounts use $6$ (sha512)
+  CIS-NET-5.3.1: unknown
+  CIS-NET-6.1.1: fail    # ge-0/0/0 faces the ISP with no input filter
+
+notes: >
+  CIS-NET-1.1.1 is labelled pass on a vendor rule: on Junos a service that is
+  not configured is not running, so the absence of "system services telnet" is
+  an answer rather than a silence. A tool that reports UNKNOWN here is being
+  more cautious than the evidence requires - which is the safe direction, and
+  exactly the kind of gap this measurement exists to surface.

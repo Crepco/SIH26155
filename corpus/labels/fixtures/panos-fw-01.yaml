@@ -1,0 +1,53 @@
+config_id: panos-fw-01
+labelled_by: "claude-opus-5 (AI-assisted, awaiting human review)"
+labelled_on: 2026-09-20
+
+ir_facts:
+  mgmt.telnet_enabled:
+    value: true
+    line: 52           # <disable-telnet>no</disable-telnet>
+  mgmt.http_enabled:
+    value: true
+    line: 53
+  mgmt.https_enabled:
+    value: true
+    line: 54
+  mgmt.ssh.enabled:
+    value: true
+    line: 55
+  mgmt.idle_timeout_min:
+    value: 60
+    line: 79
+  mgmt.login_banner:
+    value: true
+    line: 50
+  snmp.version:
+    value: 2
+    line: 62
+  ntp.authenticated:
+    value: false
+    line: 71           # <authentication-type><none/>
+  logging.servers:
+    value: ["10.0.0.5"]
+    line: 33
+
+expected_verdicts:
+  CIS-NET-1.1.1: fail
+  CIS-NET-1.1.2: unknown # ssh is enabled; PAN-OS states no protocol version
+  CIS-NET-1.2.4: fail    # 60 minutes
+  CIS-NET-1.3.1: fail
+  CIS-NET-1.4.1: fail    # no permitted-ip list
+  CIS-NET-2.1.1: fail    # v2c
+  CIS-NET-2.1.2: fail    # "public"
+  CIS-NET-3.1.1: pass
+  CIS-NET-4.1.1: fail    # authentication-type none
+  CIS-NET-5.1.1: fail    # no authentication profile or server profile
+  CIS-NET-5.2.1: fail    # the admin account's phash is $1$ (md5)
+  CIS-NET-5.3.1: unknown
+  CIS-NET-6.1.1: pass    # both data interfaces sit in zones with a security policy
+
+notes: >
+  CIS-NET-6.1.1 passes on a platform rule: PAN-OS filters by zone policy, not
+  by interface ACL, and an interface in no zone passes no traffic at all. An
+  auditor who marked this fail would be applying an IOS-shaped control to a
+  firewall that does not work that way.
