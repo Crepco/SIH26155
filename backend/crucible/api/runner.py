@@ -19,6 +19,7 @@ from typing import Any
 
 from crucible.adapters.pack import AdapterPack
 from crucible.common.canonical import canonical_bytes
+from crucible.graph import DeviceInput, FleetReport, build_fleet_report
 from crucible.ingest.bundle import load
 from crucible.ledger.chain import Ledger
 from crucible.ledger.signing import load_or_create_key
@@ -52,6 +53,9 @@ class AuditJob:
     """A whole run - one device or two hundred."""
 
     results: list[AuditResult] = field(default_factory=list)
+    #: Cross-device findings. Built whenever more than one device is audited,
+    #: because a single device has no fleet to correlate against.
+    fleet: FleetReport | None = None
     ruleset_size: int = 0
     rule_set_digest: str = ""
     ledger_path: str | None = None
@@ -80,6 +84,7 @@ class AuditJob:
     def to_dict(self) -> dict[str, Any]:
         return {
             "devices": len(self.results),
+            "fleet": self.fleet.to_dict() if self.fleet else None,
             "fleet_score": self.fleet_score,
             "mean_coverage": self.mean_coverage,
             "totals": self.totals(),
@@ -132,6 +137,7 @@ def run_audit(
     if output:
         output.mkdir(parents=True, exist_ok=True)
 
+    graph_inputs: list[DeviceInput] = []
     ledger = None
     key = None
     if sign and output:
@@ -171,8 +177,32 @@ def run_audit(
         if output:
             _write_artefacts(report, output, formats, result)
         job.results.append(result)
+        graph_inputs.append(DeviceInput(bundle.device_id, parsed.ir, report.score))
+
+    if len(graph_inputs) > 1:
+        job.fleet = build_fleet_report(graph_inputs)
+        if output:
+            _write_fleet(job.fleet, output, formats)
 
     return job
+
+
+def _write_fleet(fleet: FleetReport, output: Path, formats: tuple[str, ...]) -> None:
+    """The fleet report, beside the per-device ones."""
+    import json
+
+    from crucible.report.text import render_fleet_markdown
+
+    if "json" in formats:
+        (output / "fleet.json").write_text(
+            json.dumps(fleet.to_dict(), indent=2, sort_keys=True), encoding="utf-8"
+        )
+    if "md" in formats:
+        (output / "fleet.md").write_text(render_fleet_markdown(fleet), encoding="utf-8")
+    if "pdf" in formats:
+        from crucible.report.pdf import render_fleet_pdf
+
+        render_fleet_pdf(fleet, str(output / "fleet.pdf"))
 
 
 def _write_artefacts(

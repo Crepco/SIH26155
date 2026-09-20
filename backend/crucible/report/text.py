@@ -12,9 +12,10 @@ learns the other.
 from __future__ import annotations
 
 from crucible.common.types import FindingState, Verdict
+from crucible.graph.report import FleetReport
 from crucible.report.build import AuditReport
 
-__all__ = ["render_markdown"]
+__all__ = ["render_fleet_markdown", "render_markdown"]
 
 _STATE_MARK = {
     FindingState.DEMONSTRATED: "PROVEN",
@@ -212,6 +213,81 @@ def render_markdown(report: AuditReport) -> str:
             f"| Ledger entry {report.ledger_seq} | **Verification hash "
             f"`{report.verification_hash}`**"
         )
+    add("")
+    add("Generated offline. No configuration data left this host.")
+    add("")
+    return "\n".join(out)
+
+
+def render_fleet_markdown(fleet: FleetReport) -> str:
+    """The cross-device report: what no single device's audit could say."""
+    out: list[str] = []
+    add = out.append
+
+    counts = fleet.counts()
+    graph = fleet.graph.to_dict()["counts"]
+    add("# Fleet report")
+    add("")
+    add(f"**{fleet.headline()}**")
+    add("")
+    add(
+        f"{graph['devices']} devices, {graph['interfaces']} interfaces, "
+        f"{graph['segments']} segments. Critical {counts['critical']}, high {counts['high']}, "
+        f"medium {counts['medium']}, low {counts['low']}."
+    )
+    add("")
+    add("Every finding here is invisible to a per-device checklist: each device on these")
+    add("paths passes its own audit. Adjacency is inferred from addressing, and any finding")
+    add("that depends on an inferred link says so.")
+    add("")
+
+    # -- 1. fixes, ranked by what they sever --------------------------------
+    add("## 1. Fixes, in the order that matters")
+    add("")
+    add("Ranked by attack paths severed, not by severity count.")
+    add("")
+    add("| # | Fix | Paths severed | Devices | Rule |")
+    add("|---|-----|---------------|---------|------|")
+    for index, fix in enumerate(fleet.fixes, start=1):
+        add(
+            f"| {index} | {fix.action} | {fix.paths_severed} | "
+            f"{', '.join(fix.devices)} | {fix.rule_id or '-'} |"
+        )
+    add("")
+
+    # -- 2. the findings ------------------------------------------------------
+    add("## 2. Cross-device findings")
+    add("")
+    for correlation in fleet.correlations:
+        add(f"### `{correlation.id}` - {correlation.title}")
+        add("")
+        add(f"**{correlation.severity.upper()}** | confidence: {correlation.confidence}")
+        add("")
+        add(correlation.summary)
+        add("")
+        if correlation.paths:
+            add("Paths:")
+            add("")
+            add("```")
+            for path in correlation.paths:
+                marker = "  (inferred adjacency)" if path.inferred else ""
+                add(" -> ".join(path.hops) + marker)
+            add("```")
+            add("")
+        if correlation.evidence:
+            add("Evidence:")
+            add("")
+            for item in correlation.evidence:
+                add(f"- `{item['device']}` `{item['ir_path']}` - {item['detail']}")
+            add("")
+        if correlation.remediation:
+            add("Remediation:")
+            add("")
+            for step in correlation.remediation:
+                add(f"- {step}")
+            add("")
+
+    add("---")
     add("")
     add("Generated offline. No configuration data left this host.")
     add("")

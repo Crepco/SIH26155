@@ -149,6 +149,32 @@ def _cmd_audit(args: argparse.Namespace) -> int:
             print(f"    {kind:9} {path}")
         print()
 
+    if job.fleet is not None and job.fleet.correlations:
+        fleet = job.fleet
+        counts = fleet.counts()
+        print("  FLEET   what no single device's audit can see")
+        print(f"    {fleet.headline()}")
+        print(
+            f"    critical {counts['critical']}  high {counts['high']}  "
+            f"medium {counts['medium']}  across {fleet.paths} attack paths"
+        )
+        print()
+        print("    fixes, ranked by paths severed:")
+        for index, fix in enumerate(fleet.fixes[:6], start=1):
+            print(f"      {index}. [{fix.paths_severed:>2} paths] {fix.action}")
+        if len(fleet.fixes) > 6:
+            print(f"      ... {len(fleet.fixes) - 6} more")
+        print()
+        if not args.all:
+            print("    (--all lists every cross-device finding)")
+        else:
+            for correlation in fleet.correlations:
+                print(f"      {correlation.severity.upper():8} {correlation.id}")
+                print(f"               {correlation.title}")
+                for route in correlation.paths[:3]:
+                    print(f"                 {' -> '.join(route.hops)}")
+        print()
+
     if job.ledger_path:
         print(f"  ledger  {job.ledger_path}")
         print()

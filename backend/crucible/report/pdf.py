@@ -37,9 +37,10 @@ from reportlab.platypus import (
 )
 
 from crucible.common.types import FindingState, Verdict
+from crucible.graph.report import FleetReport
 from crucible.report.build import AuditReport
 
-__all__ = ["render_pdf"]
+__all__ = ["render_fleet_pdf", "render_pdf"]
 
 # Three states, three visual treatments, never collapsed into two. A reader who
 # remembers only one thing should remember that grey is not green.
@@ -416,4 +417,146 @@ def render_pdf(report: AuditReport, path: str | Path) -> Path:
         )
 
     _Doc(str(target), report).build(story)
+    return target
+
+
+class _FleetDoc(BaseDocTemplate):
+    """Same page furniture as a device report, without a device to name."""
+
+    def __init__(self, path: str, **kwargs: Any) -> None:
+        super().__init__(path, pagesize=A4, **kwargs)
+        frame = Frame(18 * mm, 20 * mm, A4[0] - 36 * mm, A4[1] - 40 * mm, id="body")
+        self.addPageTemplates([PageTemplate(id="main", frames=[frame], onPage=self._decorate)])
+
+    def _decorate(self, canvas: Any, _doc: Any) -> None:
+        canvas.saveState()
+        canvas.setStrokeColor(RULE)
+        canvas.setLineWidth(0.5)
+        canvas.line(18 * mm, A4[1] - 15 * mm, A4[0] - 18 * mm, A4[1] - 15 * mm)
+        canvas.setFont("Helvetica", 7)
+        canvas.setFillColor(MUTED)
+        canvas.drawString(18 * mm, A4[1] - 13 * mm, "CRUCIBLE - compliance you can prove")
+        canvas.drawRightString(A4[0] - 18 * mm, A4[1] - 13 * mm, "fleet report")
+        canvas.line(18 * mm, 16 * mm, A4[0] - 18 * mm, 16 * mm)
+        canvas.setFont("Courier", 6.8)
+        canvas.drawString(18 * mm, 12 * mm, "cross-device findings")
+        canvas.drawCentredString(
+            A4[0] / 2, 12 * mm, "generated offline - no configuration data left this host"
+        )
+        canvas.drawRightString(A4[0] - 18 * mm, 12 * mm, f"page {canvas.getPageNumber()}")
+        canvas.restoreState()
+
+
+def render_fleet_pdf(fleet: FleetReport, path: str | Path) -> Path:
+    """The fleet report as a document, ranked fixes first."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    style = _styles()
+    width = A4[0] - 36 * mm
+    story: list[Any] = []
+    counts = fleet.counts()
+    graph = fleet.graph.to_dict()["counts"]
+
+    story.append(Paragraph("Fleet report", style["title"]))
+    story.append(
+        Paragraph(
+            f"{graph['devices']} devices &middot; {graph['interfaces']} interfaces &middot; "
+            f"{graph['segments']} segments",
+            style["muted"],
+        )
+    )
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(f"<b>{fleet.headline()}</b>", style["body"]))
+    story.append(Spacer(1, 4))
+    story.append(
+        Paragraph(
+            "Every finding here is invisible to a per-device checklist: each device on these "
+            "paths passes its own audit. Adjacency is inferred from addressing, and any finding "
+            "resting on an inferred link is marked.",
+            style["muted"],
+        )
+    )
+
+    # -- ranked fixes ---------------------------------------------------------
+    story.append(Paragraph("1. Fixes, in the order that matters", style["h2"]))
+    story.append(
+        Paragraph(
+            "Ranked by attack paths severed, not by severity count. "
+            "That is the difference between a list of findings and a plan.",
+            style["body"],
+        )
+    )
+    rows: list[list[Any]] = [["#", "Fix", "Paths", "Rule"]]
+    for index, fix in enumerate(fleet.fixes, start=1):
+        rows.append(
+            [
+                str(index),
+                Paragraph(
+                    f"{fix.action}<br/><font size=7 color='#5F6368'>"
+                    f"{', '.join(fix.devices)}</font>",
+                    style["body"],
+                ),
+                str(fix.paths_severed),
+                fix.rule_id or "-",
+            ]
+        )
+    table = Table(rows, colWidths=[8 * mm, width - 48 * mm, 14 * mm, 26 * mm])
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 8),
+                ("FONT", (0, 1), (-1, -1), "Helvetica", 8),
+                ("TEXTCOLOR", (0, 0), (-1, -1), INK),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.5, INK),
+                ("LINEBELOW", (0, 1), (-1, -2), 0.25, RULE),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    story.append(table)
+
+    # -- findings --------------------------------------------------------------
+    story.append(Paragraph("2. Cross-device findings", style["h2"]))
+    story.append(
+        Paragraph(
+            f"Critical {counts['critical']} &middot; high {counts['high']} &middot; "
+            f"medium {counts['medium']} &middot; low {counts['low']}",
+            style["muted"],
+        )
+    )
+    for correlation in fleet.correlations:
+        block: list[Any] = [
+            Paragraph(
+                f"<font color='{SEVERITY_COLOURS.get(correlation.severity, MUTED)}'>"
+                f"<b>{correlation.severity.upper()}</b></font> &nbsp; "
+                f"<font face='Courier' size=8>{correlation.id}</font> &nbsp; "
+                f"{correlation.title}",
+                style["h3"],
+            ),
+            Paragraph(correlation.summary, style["body"]),
+        ]
+        if correlation.paths:
+            # Summarised on purpose: a full hop list is fixed-width text that
+            # cannot wrap, and it would run off the page. Every hop is in
+            # fleet.md and fleet.json.
+            lines = []
+            for route in correlation.paths[:6]:
+                marker = " (inferred)" if route.inferred else ""
+                hops = max(len(route.hops) // 2, 1)
+                plural = "hop" if hops == 1 else "hops"
+                lines.append(f"{route.source}  =>  {route.target}   {hops} {plural}{marker}")
+            if len(correlation.paths) > 6:
+                lines.append(f"... {len(correlation.paths) - 6} more paths")
+            block.append(Preformatted("\n".join(lines), style["mono"]))
+        if correlation.remediation:
+            block.append(
+                Paragraph("<b>Fix:</b> " + "<br/>".join(correlation.remediation), style["body"])
+            )
+        story.append(KeepTogether(block))
+        story.append(Spacer(1, 4))
+
+    _FleetDoc(str(target)).build(story)
     return target
