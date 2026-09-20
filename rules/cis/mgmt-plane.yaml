@@ -5,7 +5,7 @@
 
 - id: CIS-NET-1.1.1
   title: "Telnet must be disabled on all management transports"
-  frameworks: [CIS-v8, NIST-SP800-53:AC-17, STIG-NET0700]
+  frameworks: [CIS-v8, NIST-SP800-53:AC-17, STIG-NET0700, ISO27001:A.8.20, ISO27001:A.8.24]
   severity: critical
   assert: mgmt.telnet_enabled == false
   rationale: >
@@ -55,7 +55,7 @@
 
 - id: CIS-NET-1.1.2
   title: "SSH must be enabled and restricted to protocol version 2"
-  frameworks: [CIS-v8, NIST-SP800-53:AC-17, STIG-NET1638]
+  frameworks: [CIS-v8, NIST-SP800-53:AC-17, STIG-NET1638, ISO27001:A.8.20, ISO27001:A.8.24]
   severity: high
   assert: mgmt.ssh.enabled == true and mgmt.ssh.version == 2
   rationale: >
@@ -88,7 +88,7 @@
 
 - id: CIS-NET-1.2.4
   title: "Idle session timeout must be 10 minutes or less"
-  frameworks: [CIS-v8, NIST-SP800-53:AC-11, STIG-NET0993]
+  frameworks: [CIS-v8, NIST-SP800-53:AC-11, STIG-NET0993, ISO27001:A.8.5]
   severity: medium
   assert: mgmt.idle_timeout_min <= 10
   rationale: >
@@ -124,7 +124,7 @@
 
 - id: CIS-NET-1.3.1
   title: "Plaintext HTTP management interface must be disabled"
-  frameworks: [CIS-v8, NIST-SP800-53:SC-8, STIG-NET1660]
+  frameworks: [CIS-v8, NIST-SP800-53:SC-8, STIG-NET1660, ISO27001:A.8.20, ISO27001:A.8.24]
   severity: high
   assert: mgmt.http_enabled == false
   rationale: >
@@ -160,7 +160,7 @@
 
 - id: CIS-NET-1.4.1
   title: "Management plane access must be restricted by an access control list"
-  frameworks: [CIS-v8, NIST-SP800-53:AC-3, STIG-NET1637]
+  frameworks: [CIS-v8, NIST-SP800-53:AC-3, STIG-NET1637, ISO27001:A.5.15, ISO27001:A.8.20]
   severity: critical
   assert: defined(mgmt.mgmt_acl)
   rationale: >

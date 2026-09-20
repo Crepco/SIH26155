@@ -4,7 +4,7 @@
 
 - id: CIS-NET-2.1.1
   title: "SNMP must run version 3 with authentication and privacy"
-  frameworks: [CIS-v8, NIST-SP800-53:IA-3, STIG-NET0894]
+  frameworks: [CIS-v8, NIST-SP800-53:IA-3, STIG-NET0894, ISO27001:A.8.20, ISO27001:A.8.24]
   severity: high
   assert: snmp.version == 3
   rationale: >
@@ -44,7 +44,7 @@
 
 - id: CIS-NET-2.1.2
   title: "No default or well-known SNMP community strings may be configured"
-  frameworks: [CIS-v8, NIST-SP800-53:IA-5, STIG-NET0893]
+  frameworks: [CIS-v8, NIST-SP800-53:IA-5, STIG-NET0893, ISO27001:A.5.17, ISO27001:A.8.9]
   severity: critical
   assert: empty(snmp.communities)
   rationale: >
@@ -70,7 +70,7 @@
 
 - id: CIS-NET-3.1.1
   title: "Device must forward logs to at least one central syslog server"
-  frameworks: [CIS-v8, NIST-SP800-53:AU-4, STIG-NET1021]
+  frameworks: [CIS-v8, NIST-SP800-53:AU-4, STIG-NET1021, ISO27001:A.8.15]
   severity: medium
   assert: defined(logging.servers) and not empty(logging.servers)
   rationale: >
@@ -100,7 +100,7 @@
 
 - id: CIS-NET-4.1.1
   title: "Time synchronisation must use authenticated NTP"
-  frameworks: [CIS-v8, NIST-SP800-53:AU-8, STIG-NET0813]
+  frameworks: [CIS-v8, NIST-SP800-53:AU-8, STIG-NET0813, ISO27001:A.8.17]
   severity: medium
   assert: ntp.authenticated == true
   rationale: >

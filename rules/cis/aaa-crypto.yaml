@@ -4,7 +4,7 @@
 
 - id: CIS-NET-5.1.1
   title: "Centralised AAA must be configured for administrative authentication"
-  frameworks: [CIS-v8, NIST-SP800-53:IA-2, STIG-NET1623]
+  frameworks: [CIS-v8, NIST-SP800-53:IA-2, STIG-NET1623, ISO27001:A.5.15, ISO27001:A.8.5]
   severity: high
   assert: aaa.enabled == true and not empty(aaa.servers)
   rationale: >
@@ -34,7 +34,7 @@
 
 - id: CIS-NET-5.2.1
   title: "Local credentials must use a modern password hashing algorithm"
-  frameworks: [CIS-v8, NIST-SP800-53:IA-5(1), STIG-NET1636]
+  frameworks: [CIS-v8, NIST-SP800-53:IA-5(1), STIG-NET1636, ISO27001:A.5.17, ISO27001:A.8.24]
   severity: high
   assert: all(aaa.local_users, user.hash in [scrypt, pbkdf2, sha512])
   rationale: >
@@ -61,7 +61,7 @@
 
 - id: CIS-NET-5.3.1
   title: "Weak SSH key exchange algorithms must not be offered"
-  frameworks: [CIS-v8, NIST-SP800-53:SC-13, STIG-NET1639]
+  frameworks: [CIS-v8, NIST-SP800-53:SC-13, STIG-NET1639, ISO27001:A.8.24]
   severity: high
   assert: not any(mgmt.ssh.kex, algo in [diffie-hellman-group1-sha1, diffie-hellman-group-exchange-sha1])
   rationale: >
@@ -91,7 +91,7 @@
 
 - id: CIS-NET-6.1.1
   title: "Every user-facing interface must apply an inbound access control list"
-  frameworks: [CIS-v8, NIST-SP800-53:SC-7, STIG-NET0740]
+  frameworks: [CIS-v8, NIST-SP800-53:SC-7, STIG-NET0740, ISO27001:A.8.20, ISO27001:A.8.22]
   severity: medium
   assert: all(interfaces, iface.shutdown == true or iface.is_mgmt == true or defined(iface.acl_in))
   rationale: >
