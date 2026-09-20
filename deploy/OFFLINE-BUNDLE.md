@@ -3,49 +3,92 @@
 The deliverable that makes the air-gap claim true rather than aspirational.
 
 **Definition of done: a machine that has never had internet access can install Crucible from this
-bundle and complete a full audit, including a Crucible verification run.**
+bundle and complete a full audit.** That is tested, not asserted — see *How it is verified*.
 
 ## What goes in
 
 | Component | Why it must be bundled |
 |-----------|------------------------|
-| Container images (api, worker, db, redis, ollama, frontend, neo4j) | A `docker pull` on the target host is a network call |
-| Quantised model weights, baked into the ollama image | A runtime model pull is the most likely accidental egress in the whole system |
-| Sentence-transformer embedding weights | Same, and easy to miss because the library fetches lazily on first use |
 | Python wheels for every dependency | Installation must run with no package index configured |
-| Frontend build output | Fonts and icons included. No CDN reference anywhere |
-| VyOS image and the probe image | Crucible boots twins offline or it does not boot them |
-| Rule set (CIS + imported STIG) | An air-gapped deployment cannot fetch a benchmark |
-| IR, rule and adapter schemas | Validation is not optional, so the contracts ship |
-| Installation script and this document | Someone outside the team has to follow it cold |
+| The product, taken from `git archive` | Source, rules, schemas, the console, the labs |
+| Corpus label files | The validation harness reads them, and the suite runs from the bundle |
+| The Crucible twin image, via `docker save` | A `docker pull` on the target host is a network call |
+| `INSTALL.md` and a manifest | Someone outside the team has to follow it cold |
+
+The console needs nothing else: it is plain HTML, CSS and JavaScript with no build step, no
+bundler and no font or icon fetched from anywhere (ADR 0007). There is no model in the bundle,
+because the default proposer is lexical and needs none (ADR 0003); a deployment that wants
+Ollama installs it separately and binds it to loopback.
 
 ## How it is built
 
 By a script, never assembled by hand. Hand-assembly is how a bundle ends up working on the
 machine that built it and nowhere else.
 
-    scripts/build-offline-bundle.sh
+```bash
+scripts/build-offline-bundle.sh          # writes dist/
+```
 
-produces a single archive plus a manifest of SHA-256 digests. The manifest is what makes the
-bundle verifiable on arrival, which matters when the delivery mechanism is physically carrying
-media into a secure facility.
+Building needs a network, to download the wheels. Installing must not.
+
+The contents come from `git archive HEAD`, not from a copy of the working tree. This is not
+fastidiousness: a plain `cp -r` picked up a local virtualenv on the first run, which took the
+bundle from 17M to 74M and buried files deep enough that extraction silently truncated them on
+Windows.
+
+A measured build, on a laptop:
+
+| | |
+|---|---|
+| Archive | 17 MB, built in ~41s |
+| Wheels | 24, for 7 direct runtime dependencies |
+| Files | 227, each with a SHA-256 in `MANIFEST.sha256` |
+| Integrity | A digest of the manifest, and a `.sha256` beside the archive |
+
+The archive's digest is recorded under its bare filename, so `sha256sum -c` works from wherever
+the media is mounted rather than only from the directory that built it.
 
 ## How it is verified
 
-The build is not trusted; it is tested. The verification job:
+The build is not trusted; it is tested.
 
-1. Starts a container with **no network namespace route** except loopback.
-2. Installs from the bundle with no package index and no registry configured.
-3. Runs a full audit over a corpus device: ingest, parse, evaluate, report, sign.
-4. Runs one Crucible verification: boot the twin, demonstrate, remediate, re-test, regression.
-5. Asserts that no DNS resolution and no outbound connection was attempted at any point.
+```bash
+scripts/verify-offline-bundle.sh dist/crucible-0.1.0-offline-YYYYMMDD.tar.gz
+```
 
-Any attempt to resolve or connect fails the job. This runs in CI from Phase 1, not as a manual
-check in September, because the failure we are guarding against is a dependency quietly fetching
-something on first use — and that is exactly the failure that shows up for the first time in
-front of an audience.
+1. Checks the archive digest, then the manifest against the extracted contents.
+2. Installs into a fresh virtualenv with `--no-index`, so any package not in the bundle fails
+   here rather than on the customer's machine.
+3. Runs the suite, a full audit and a ledger verification out of the installed copy, with every
+   proxy variable pointed at the discard port.
+
+A clean run:
+
+```
+  ok    archive digest matches
+  ok    manifest verifies (227 files)
+  ok    installed from vendored wheels with no package index
+  ok    the suite passes from the installed bundle (224 passed)
+  ok    a full audit ran and wrote a ledger
+  ok    the ledger verifies INTACT
+```
+
+What this does *not* do is sever the interface — that needs a container with no route but
+loopback, which is how the CI job runs it. What it does catch is the common failure: something
+that is not actually in the bundle, so installation reaches out for it.
+
+Poisoning the proxy variables is the part that has already paid for itself. It failed on first
+use, and the cause was not the bundle: the Ollama proposer validated that its URL was loopback
+but called `urlopen`, whose default opener reads `http_proxy` from the environment. On a host
+with a corporate proxy configured, every prompt — customer configuration lines included — would
+have gone to that proxy. The transport now bypasses proxies explicitly, and a test fails if the
+proxy is ever consulted.
 
 ## Delivery
 
-One archive, one manifest, one signature. The install script verifies the manifest against the
-signature before extracting anything, using a public key delivered separately.
+One archive, one manifest, one digest. Where the delivery mechanism is physically carrying media
+into a secure facility, the manifest is what makes the bundle verifiable on arrival.
+
+Signing the manifest with the same Ed25519 machinery the ledger and adapter packs already use —
+so the install script can refuse an archive that was altered in transit — is the obvious next
+step and is not built yet.
