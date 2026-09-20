@@ -3,9 +3,10 @@
 **For the build as it exists today.** Every command here has been run and every claim is
 something the code actually does.
 
-> [15 — Demo script](15-demo-script.md) is the *finals* script. It includes live vendor training,
-> the fleet attack-path graph and `crucible verify` against a booted twin. **None of those are
-> built yet.** Do not demo them and do not imply them. Use this document for the internal round.
+> [15 — Demo script](15-demo-script.md) is the *finals* script, for a longer slot. Everything it
+> shows — live vendor training, the fleet attack-path graph, `crucible verify` against a booted
+> twin — is now built. This document is the five-minute version, and the twin beat here is
+> optional because it is the one thing that needs a Docker daemon on the presenting machine.
 
 ---
 
@@ -18,10 +19,11 @@ git clone https://github.com/Crepco/SIH26155.git
 cd SIH26155
 
 python --version          # must be 3.11 or newer
-pip install pyyaml reportlab cryptography fastapi uvicorn
+pip install -r backend/requirements.txt
 ```
 
-That is the whole install. Five packages, no build step, no database, no Docker.
+That is the whole install. Seven packages, no build step, no database, and no Docker unless you
+intend to show the twin.
 
 ### Verify the machine is ready
 
@@ -30,7 +32,7 @@ cd backend
 python tests/run_tests.py
 ```
 
-Expect `101 passed`. If anything fails, stop and fix it — do not present a red suite.
+Expect `224 passed`. If anything fails, stop and fix it — do not present a red suite.
 
 ---
 
@@ -47,8 +49,8 @@ rm -rf ../reports          # Windows: rmdir /s /q ..\reports
 
 Checklist:
 
-- [ ] `101 passed` from the test suite.
-- [ ] The audit prints five devices and exits with code `1`.
+- [ ] `224 passed` from the test suite.
+- [ ] The audit prints six devices and exits with code `1`.
 - [ ] `verify` prints **INTACT**.
 - [ ] `../reports` deleted, so nothing is stale on stage.
 - [ ] Two terminals open, font size at least 16pt, in the `backend` directory.
@@ -85,8 +87,8 @@ python -m uvicorn crucible.api.main:app --host 127.0.0.1 --port 8000
 
 Open `http://127.0.0.1:8000`. Click **Audit the sample fleet**.
 
-> "That is five real configurations from five vendors — Cisco, Arista, Fortinet, Juniper,
-> MikroTik. Parsed, scored, and signed in about a second, with the network off. There is no cloud
+> "That is six real configurations from six vendors — Cisco, Arista, Fortinet, Juniper,
+> MikroTik, Palo Alto. Parsed, scored, and signed in about a second, with the network off. There is no cloud
 > model in this system and no outbound call in any code path. That is not a preference. The
 > customer is NCIIPC — a device config is a blueprint of a national network's defences, and
 > sending it to an API in another country disqualifies the tool before anyone reads the features."
@@ -142,7 +144,7 @@ In **T2**:
 python -m crucible.api.cli verify ../reports/ledger.jsonl
 ```
 
-> "Five entries, chain intact, signature verified."
+> "Six entries, chain intact, signature verified."
 
 Now **open `reports/ledger.jsonl` in your editor, on screen**, and change one character in the
 second entry — flip a digit in `merkle_root`. Save. Do it by hand where they can see it; running
@@ -171,16 +173,20 @@ python -m crucible.api.cli audit tests/fixtures/devices --rules ../rules/cis --o
 
 Put this on a slide. Say it plainly.
 
-> "What you just saw is real and runs offline today: ingestion, five vendor parsers, the
-> vendor-neutral IR, the rule engine, line-cited reports, and the signed ledger. 101 tests,
-> including one that fails the build if any asset on that page tries to reach the internet.
+> "What you just saw is real and runs offline: ingestion, six vendor parsers, the vendor-neutral
+> IR, the rule engine, line-cited reports, the signed ledger — and the three things we said last
+> time were only specified. It learns a vendor it has never seen, from an administrator, and
+> ships that as a signed pack. It correlates a fleet into attack paths. And it boots a disposable
+> twin to prove a finding before you touch production. 224 tests, including one that fails the
+> build if any asset on that page tries to reach the internet.
 >
-> Three things are specified and not yet built: the training loop that learns an unseen vendor,
-> the fleet attack-path graph, and Crucible — the sandbox that boots a disposable twin and proves
-> a finding before you touch production. They are Phases 2 to 4.
+> Two things are honestly open. Our accuracy numbers — precision 1.00, recall 0.90 — come from
+> six configurations we labelled ourselves, and **nobody outside this team has reviewed those
+> labels**. And the corpus is six fixtures, not the sixty real configurations we want. Both are
+> measurement problems, not engineering ones, and the tool prints that caveat itself rather than
+> waiting for us to remember.
 >
-> We would rather show you a working foundation and an honest gap than a demo that only survives
-> if nobody asks a second question."
+> We would rather hand you the limits of our own numbers than have you find them."
 
 ---
 
@@ -188,26 +194,35 @@ Put this on a slide. Say it plainly.
 
 Getting caught overclaiming is worse than any missing feature.
 
-| Do not say | Because |
-|---|---|
-| "It learns new vendors automatically" | Tiers 1–3 are not implemented. An unknown vendor currently reports UNKNOWN — correct, but not learning. |
-| "We prove findings against a live twin" | Crucible is Phase 4. No finding in this build can reach DEMONSTRATED. |
-| "It maps attack paths across the fleet" | The fleet graph is Phase 3. |
-| "We support forty vendors" | Five vendor parsers exist. PAN-OS is fingerprinted but has no parser. |
-| "300+ STIG controls" | The XCCDF importer is not written. There are 13 hand-authored CIS rules. |
-| "The AI proposes mappings" | True of the design, not of this build — there is no model in it at all yet. |
+The list has changed shape. Tiers 1–3, the fleet graph and Crucible are all built now, so those
+claims are safe to make. What replaced them is subtler, and easier to say by accident.
 
-Safe framing for all of these: **"specified, and Phase N."** Point at the ADR.
+| Do not say | Because | Say instead |
+|---|---|---|
+| "It learns new vendors automatically" | An administrator confirms every mapping. That gate is the design, not a limitation — an unattended parser-writer is exactly what an auditor could not trust. | "An administrator teaches it a vendor in minutes, without us shipping code." |
+| "Precision is 100%" | True of the number, misleading about its weight. Six configurations, and **the labels have not been reviewed by a person**. | "1.00 precision on six hand-labelled configs — our own labels, not yet reviewed. It is a starting point, not a benchmark." |
+| "We tested it on sixty real configurations" | `corpus/raw` is empty. Every number comes from the six shipped fixtures. | "Six fixtures today. Scaling the corpus is the open work, and `make corpus` prints the real count." |
+| "We support forty vendors" | Six Tier-0 parsers. The answer to the other thirty-four is the training loop, which is a better answer — use it. | "Six properly, and a way to add the seventh without code." |
+| "300+ STIG controls" | The importer is real and works on real DISA benchmarks, but the repository ships 13 hand-authored CIS rules. | "13 controls across four frameworks, plus an importer that ingests a DISA benchmark." |
+| "Every finding is proven on a twin" | Only HIGH and CRITICAL findings get a twin, only where Docker is present, and only some are demonstrated. | "Findings we can prove are marked DEMONSTRATED; the rest stay ASSERTED, and the report says which." |
+
+The framing that works for all of these: **give the number, then give its limit, unprompted.** An
+evaluator who finds the limit themselves stops believing the number. One who is handed it starts
+believing the rest.
 
 ---
 
 ## Part 5 — Questions you will get
 
 **"Where is the AI? This looks like regexes."**
-> "Correct, and that is the architecture rather than a gap. The AI in our design writes *parsers*,
-> never verdicts — it proposes a field mapping for a line no deterministic parser claimed, and
-> that mapping is then applied deterministically. Five vendors are handled at tier 0, so today the
-> model layer has nothing to do. It matters on vendor seven, and that is Phase 2. ADR 0004."
+> "Correct on the audit you just watched, and that is the architecture rather than a gap. The AI
+> writes *parsers*, never verdicts — it proposes a field mapping for a line no deterministic
+> parser claimed, and that mapping is applied deterministically. Six vendors are handled at tier
+> 0, so on those the model layer has nothing to do. Show me a vendor we do not parse and you will
+> see it work. ADR 0004."
+>
+> Then open the TRAIN view, or run `propose --hold-out mikrotik`. Held out that way, it recovers
+> 7 of 9 fields cold.
 
 **"Why is so much UNKNOWN? That looks like it failed."**
 > "It is the feature. Those are controls where the configuration genuinely does not say. Every
@@ -216,24 +231,28 @@ Safe framing for all of these: **"specified, and Phase N."** Point at the ADR.
 > determine'?"
 
 **"Only 13 rules?"**
-> "Hand-authored, each with per-vendor remediation and evidence. The scaling answer is the XCCDF
-> importer — STIGs ship as machine-readable XML, so one importer is 300+ controls. That is a
-> half-day, and it is Phase 2. We spent this phase on the format, not the count."
+> "Hand-authored, each mapped to four frameworks, each with per-vendor remediation and evidence,
+> and each checked against labelled ground truth. The scaling answer is the XCCDF importer, which
+> is built: point it at a DISA benchmark and those controls load into the same engine. We spent
+> the time on the format and the evidence, not the count — a hundred controls nobody validated
+> would be a worse artefact, not a better one."
 
 **"How do I know the AI didn't invent a finding?"**
-> Re-open the evidence gutter. "File, line number, raw text. And in this build there is no model
-> in the verdict path to invent anything."
+> Re-open the evidence gutter. "File, line number, raw text — and there is no model in the verdict
+> path at all. A proposal can only ever change how a line is *read*; the verdict comes from the
+> rule. Where Docker is available we go further and prove it on a twin, which is what
+> DEMONSTRATED means on that report."
 
 **"What if the config is 40,000 lines?"**
-> "Coverage accounting is per line and the parsers are single-pass. The reason context limits
-> never bite us is that the model — when it exists — only ever sees individual unresolved lines,
-> never the file."
+> "Coverage accounting is per line and the parsers are single-pass. Context limits never bite us
+> because the model only ever sees individual unresolved lines, never the file. A sixty-device
+> fleet audits in seconds, and one unreadable device does not take the other fifty-nine with it."
 
 **"Is this just a wrapper around ciscoconfparse / Batfish?"**
-> "No dependency on either. The parsers are ours. Batfish is in the design for hard reachability
-> maths in Phase 3, and we would call it rather than reimplement it — knowing it exists is the
-> point. Nipper is the commercial product in this exact category; docs/17 says precisely where we
-> differ and where we are weaker."
+> "No dependency on either, and none in the tree — the parsers and the graph are ours. Batfish
+> solves harder reachability maths than we do, and for deep L3 analysis we would call it rather
+> than reimplement it. Nipper is the commercial product in this exact category; docs/17 says
+> precisely where we differ and where we are weaker."
 
 **"Why not just use ChatGPT?"**
 > "Because the customer cannot. And because a compliance verdict has to be identical on two runs."
