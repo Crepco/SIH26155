@@ -3,6 +3,15 @@
 Everything the team needs to build Crucible, and everything an evaluator needs to understand it.
 Read in this order if you are new to the project.
 
+> These are specifications: they describe the intended design, and several were written before
+> the code. **The [README](../README.md) is the source of truth for what is built**, and the
+> [changelog](../CHANGELOG.md) for when. Where a specification and the code disagree, the code is
+> right and the specification has a bug — except where an [ADR](adr/) says the decision changed,
+> which is what ADRs are for.
+>
+> As of 21 September 2026 every subsystem specified below is implemented: the parsing cascade
+> through Tier 3, the sandbox, the fleet graph, the ledger, reporting and the validation harness.
+
 ## Start here
 
 | Doc | What it answers |
