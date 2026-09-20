@@ -3,23 +3,65 @@
 Notable changes to Crucible. Format loosely follows Keep a Changelog; versions track the phase
 plan in [docs/12-execution-plan.md](docs/12-execution-plan.md).
 
-## [Unreleased] — idea-round submission (20 Sep 2026)
+## [Unreleased] — Phases 2 to 5 (21 Sep 2026)
+
+Everything the plan called specified is now built. 224 tests.
 
 ### Added
 
-- **Audit console** served by the API at `/`: plain HTML/CSS/JS with the evidence gutter, coverage
-  and three-state filters, and a test that fails if any asset reaches off the host.
-- `backend/requirements.txt` with only what the current build needs, including `python-multipart`,
-  which FastAPI requires for uploads, and `httpx` for the API tests. The old one-line install
-  left both out.
+- **The learning layer (Tiers 1–3).** Structural inference for an unknown grammar; a lexical
+  proposer (TF-IDF over words and character trigrams) that needs no model and is deterministic;
+  an optional local model on loopback that is only ever asked to *choose* among candidates and
+  point at the value token, never to write a pattern; the training console; and **signed Vendor
+  Adapter Packs** — data only, a fixed transform library, Ed25519 signatures and a trust store
+  that refuses an unknown signer. Measured on RouterOS with its parser held out: 7 of 9 fields.
+- **XCCDF 1.1/1.2 importer.** A DISA benchmark becomes rules the engine loads, through explicit
+  bindings, verified against real BIND and Firefox STIG content. No standard text is reproduced,
+  only identifiers.
+- **Palo Alto PAN-OS parser**, expat-based with line numbers and DTDs refused.
+- **Fleet attack-path graph.** Devices, interfaces, segments, credentials and services; four
+  correlations; reachability; remediation ranked by the paths each fix severs. Credentials are
+  matched by salted HMAC fingerprint, never by value.
+- **Crucible sandbox.** A container twin built here (ADR 0008, superseding VyOS), two internal
+  bridges, stdlib probes (telnet, SSH KEXINIT, hand-rolled SNMPv2c BER, HTTP, ACL bypass), and a
+  four-phase run: demonstrate, remediate, re-test, check for lock-out. The proof digest goes into
+  the ledger leaf. A finding is `DEMONSTRATED` only if a probe actually demonstrated it.
+- **Measured accuracy.** `crucible validate` against hand-labelled configurations: precision 1.00,
+  recall 0.90, fact accuracy 1.00 — printed with the caveat that the labels await human review.
+  A miss that lands on UNKNOWN is counted as a cautious miss, separately from a false negative.
+- **Drift.** `crucible drift` names what regressed, what was fixed, and which facts moved
+  underneath a control that was already failing. Exit 1 on regression.
+- **The offline bundle.** `build-offline-bundle.sh` vendors every wheel and the twin image;
+  `verify-offline-bundle.sh` installs it with `--no-index` and no usable proxy, then runs the
+  suite, a full audit and a ledger check out of the installed copy.
+- **Audit console** served by the API at `/`: AUDIT, TRAIN and FLEET views, plain HTML/CSS/JS,
+  with a test that fails if any asset reaches off the host.
 - Submission artefacts in `docs/submission/`: a two-page architecture document (PDF and Markdown)
   and the two-minute demo video script.
 
+### Fixed
+
+- **A proxy would have seen every prompt.** The Ollama proposer checked that its URL was loopback
+  but called `urlopen`, whose default opener reads `http_proxy`. On a host with a corporate proxy
+  — the kind that also has an air gap — every prompt, customer configuration lines included,
+  would have gone to that proxy. Loopback is now enforced in the transport.
+- **Fleet correlation was quadratic.** A 200-device audit spent 110.9s of 2m6s in path search.
+  One breadth-first sweep per (segment, port) gives identical findings in 4.0s.
+- One unreadable device no longer aborts the fleet; failures are reported per device, and an
+  audit where nothing could be read exits 2 rather than looking clean.
+- Redaction leaks found by reading the output rather than the code: SNMP community strings in the
+  evidence gutter, and credential hashes in the training view.
+- Accuracy bugs found by measuring against ground truth, not by inspection: an assertion stricter
+  than its own title, Arista eAPI assumed plaintext, and NTP and Junos services needing a
+  closed-world reading.
+- The fingerprinter called Huawei VRP "cisco" at 0.72 confidence from a single keyword. Confidence
+  is now evidence × margin, and an unrecognised device is `unknown`.
+
 ### Changed
 
-- README rewritten for someone cloning it cold: built-versus-specified status, Windows-friendly setup,
-  and the NTRO component mapping with an honest status per component.
-- Test count is now 101.
+- README, `backend/README.md` and `deploy/` rewritten against what now runs, with measured numbers
+  and their caveats rather than claims.
+- The console is plain HTML served by the API; the Next.js scaffold is retired (ADR 0007).
 
 ## [0.1.0] — Phase 1, the baseline pipeline (28 Aug 2026)
 
