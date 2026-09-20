@@ -572,6 +572,14 @@ class OllamaProposer:
         self.timeout = timeout
         self.fallback = fallback or LexicalProposer()
         self.name = f"ollama:{model}"
+        # A loopback URL is not enough on its own. urlopen's default opener
+        # reads http_proxy from the environment, so on a host with a corporate
+        # proxy configured - exactly the kind of host that also has an air gap -
+        # every prompt, customer configuration lines included, would be sent to
+        # that proxy instead of to the daemon two ports away. An empty
+        # ProxyHandler is what makes "loopback" true of the transport and not
+        # only of the string.
+        self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         request = urllib.request.Request(  # noqa: S310 - loopback enforced in __init__
@@ -580,7 +588,7 @@ class OllamaProposer:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:  # noqa: S310
+        with self._opener.open(request, timeout=self.timeout) as response:
             body = json.loads(response.read().decode("utf-8"))
         if not isinstance(body, dict):
             raise ValueError("unexpected response shape")
@@ -588,7 +596,7 @@ class OllamaProposer:
 
     def available(self) -> bool:
         try:
-            with urllib.request.urlopen(self.url + "/api/tags", timeout=1.5) as response:  # noqa: S310
+            with self._opener.open(self.url + "/api/tags", timeout=1.5) as response:
                 tags = json.loads(response.read().decode("utf-8"))
         except (OSError, ValueError, urllib.error.URLError):
             return False

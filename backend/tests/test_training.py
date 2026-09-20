@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -145,6 +146,38 @@ def test_a_local_model_chooses_but_the_pattern_is_built_deterministically():
     assert proposal.ir_path == "ntp.servers"
     assert proposal.preview == "10.0.0.1"
     assert "10\\.0" not in proposal.mapping.match
+
+
+def test_a_configured_http_proxy_never_sees_a_prompt():
+    """Loopback has to be true of the transport, not just of the URL.
+
+    urlopen's default opener reads http_proxy from the environment. On a host
+    with a corporate proxy set - the kind of host that also has an air gap -
+    that would route every prompt, customer configuration lines and all, to
+    the proxy. Port 9 is the discard port: if the proxy is consulted at all,
+    this test hangs or fails rather than quietly passing.
+    """
+    server, url = _serve({"ir_path": "ntp.servers", "value_token": "10.0.0.1", "confidence": 0.9})
+    poisoned = {
+        "http_proxy": "http://127.0.0.1:9",
+        "https_proxy": "http://127.0.0.1:9",
+        "HTTP_PROXY": "http://127.0.0.1:9",
+        "no_proxy": "",
+    }
+    restore = {key: os.environ.get(key) for key in poisoned}
+    os.environ.update(poisoned)
+    try:
+        proposal = OllamaProposer(url, "test-model").propose("ntp-service unicast-server 10.0.0.1")
+    finally:
+        for key, value in restore.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        server.shutdown()
+
+    assert proposal is not None
+    assert proposal.source == "ollama:test-model", "the proxy intercepted the call"
 
 
 def test_a_model_that_names_a_field_outside_the_candidates_is_overruled():
