@@ -22,38 +22,38 @@ requirement, and an import-contract check enforces it.
 
 ```mermaid
 flowchart LR
-    I["1 · Ingest + fingerprint<br/>files · bulk · zip · bundles<br/>vendor · OS · serial<br/><b>BUILT</b>"]
+    I["1 · Ingest + fingerprint<br/>files · bulk · zip · bundles<br/>vendor · OS · serial"]
     subgraph C["2 · Parsing cascade"]
         direction TB
-        T0["T0 deterministic parser<br/>IOS · EOS · FortiOS · Junos · RouterOS<br/><b>BUILT</b>"]
-        T1["T1 structural inference<br/>Phase 2"]
-        T2["T2 local LLM <b>proposes</b> a mapping<br/>never a verdict · Phase 2"]
-        T3["T3 admin confirms in GUI<br/>→ signed Vendor Adapter Pack · Phase 2"]
+        T0["T0 deterministic parser<br/>IOS · EOS · FortiOS · Junos<br/>RouterOS · PAN-OS"]
+        T1["T1 structural inference<br/>grammar detection, context tree"]
+        T2["T2 proposer <b>proposes</b> a mapping<br/>lexical by default · never a verdict"]
+        T3["T3 admin confirms in console<br/>→ signed Vendor Adapter Pack"]
         T0 -. unparsed .-> T1 -. unknown .-> T2 -. low confidence .-> T3
     end
-    IR[["3 · IR, the pivot<br/>vendor-neutral JSON, schema v1.0.0<br/>every fact cites file + line<br/><b>BUILT</b>"]]
-    P["4 · Policy engine<br/>YAML rules · CIS · NIST · STIG<br/>PASS / FAIL / UNKNOWN<br/><b>BUILT</b>"]
-    G["5 · Fleet graph<br/>cross-device attack paths<br/>Phase 3"]
-    R["6 · Report + ledger<br/>PDF · JSON · MD, line-cited<br/>Merkle → chain → Ed25519<br/><b>BUILT</b>"]
-    X["7 · Crucible<br/>IR → VyOS twin<br/>demonstrate → fix → re-test<br/>Phase 4"]
+    IR[["3 · IR, the pivot<br/>vendor-neutral JSON, schema v1.0.0<br/>every fact cites file + line"]]
+    P["4 · Policy engine<br/>YAML rules · CIS · NIST · STIG · ISO<br/>PASS / FAIL / UNKNOWN"]
+    G["5 · Fleet graph<br/>cross-device attack paths<br/>ranked by paths severed"]
+    R["6 · Report + ledger<br/>PDF · JSON · MD, line-cited<br/>Merkle → chain → Ed25519"]
+    X["7 · Crucible<br/>IR → container twin<br/>demonstrate → fix → re-test"]
 
     I --> C --> IR
     IR --> P --> R
-    IR -.-> G -.-> R
-    R -.-> X
+    IR --> G --> R
+    R --> X --> R
 
-    classDef spec stroke-dasharray: 5 4,color:#5c6c7a
-    class T1,T2,T3,G,X spec
+    classDef opt stroke-dasharray: 5 4,color:#5c6c7a
+    class X opt
 ```
 
-*Solid = built and tested today · dashed = specified, with its phase. Nothing below stage 3 ever
-reads raw configuration text.*
+*Every stage is built and tested. Dashed = needs a Docker daemon; without one, findings stay
+ASSERTED and the audit is unaffected. Nothing below stage 3 ever reads raw configuration text.*
 
 ## 02 · The five invariants: guarantees, each enforced by tests
 
 | # | Invariant | Consequence |
 |---|-----------|-------------|
-| 1 | **The AI never decides pass or fail.** It only writes parsers. | Model output is a candidate extraction rule, applied deterministically; the verdict comes from the YAML engine. *The AI proposes, the engine decides.* |
+| 1 | **The AI never decides pass or fail.** It only writes parsers. | A proposal is a candidate extraction rule, applied deterministically; the verdict comes from the YAML engine. A model is asked only to *choose* among candidates and point at the value token — never to write a pattern, so it cannot smuggle a regex into a pack. |
 | 2 | **Every finding carries line-level evidence.** | File, line number and raw text. The IR builder refuses a fact without a source line. |
 | 3 | **Fail closed.** Unparsed input can never produce a pass. | A missing fact evaluates to UNKNOWN under Kleene three-valued logic, and UNKNOWN can never become PASS. |
 | 4 | **Coverage is published, not hidden.** | Every report states `parsed 163 of 164 lines (99.4%)` and lists each uninterpreted line verbatim. `parsed + unparsed == total` is asserted. |
@@ -71,38 +71,51 @@ applied deterministically. Because context limits only ever apply to single unre
 ## 04 · Air-gapped by construction
 
 A device configuration maps every ACL, trust relationship and credential hash. For NCIIPC, a cloud
-LLM API is a hard disqualifier, whatever the preference. The system makes **zero outbound calls**. The
-console ships no web fonts or CDN assets, and a test fails the build if any asset reaches off the
-host. The planned AI tiers run a local quantised model via Ollama with local embeddings
-([ADR 0003](../adr/0003-local-models-only.md)). The current build needs no model at all.
+LLM API is a hard disqualifier, whatever the preference. The system makes **zero outbound calls**,
+and there is no cloud SDK in the dependency tree. The console ships no web fonts or CDN assets, and
+a test fails the build if any asset reaches off the host. The default proposer is lexical and needs
+no model at all; where a local model is wanted, the transport itself refuses any address that is
+not loopback — a proxy configured in the environment cannot capture a prompt
+([ADR 0003](../adr/0003-local-models-only.md)). The offline bundle is verified by installing it
+with no package index and no usable proxy, then running the suite and a full audit from the
+installed copy.
 
 ## 05 · Mapping to the five NTRO components
 
 | Component | Where it lives | What it does | Status |
 |-----------|----------------|--------------|--------|
-| 1 Unified ingestion | `ingest/` `fingerprint/`, console, `POST /audit` | Single or bulk upload, directories, zip archives and device bundles (config plus `show version` read as one device). Refuses path traversal, symlinks and zip bombs. Weighted fingerprinting of six vendors with a published confidence. | **Built** |
-| 2 AI training module | `training/` `adapters/`, Next.js GUI | Tiers 1–3: infer structure, a local model proposes a field mapping, and the admin confirms in a low-code GUI. The result is exported as a **signed, portable Vendor Adapter Pack**. Every uninterpreted line is already surfaced verbatim today; that list is the GUI's input. | Phase 2 |
-| 3 Multi-framework engine | `policy/` `rules/*.yaml` | A control is data. Each of the 13 controls maps to CIS v8, NIST SP 800-53 and a DISA STIG ID, and `--framework` selects without re-parsing. ISO 27001 rules and an XCCDF importer come next. | **CIS · NIST · STIG** |
-| 4 Reporting & PDF | `report/` `ledger/` | A per-device PDF with identity (vendor, model, OS, **serial**), pass/fail by severity, line-cited evidence, vendor-specific remediation CLI, a what-if score, a coverage appendix, and a verification hash on every page. | **Built** |
-| 5 Vendor-agnostic scale | `schemas/ir`, parser registry | A frozen, versioned IR schema. New rules and frameworks need no code. A new vendor is one Tier-0 module today, and an imported adapter pack with no code once Phase 2 lands. | Foundation |
+| 1 Unified ingestion | `ingest/` `fingerprint/`, console, `POST /audit` | Single or bulk upload, directories, zip archives and device bundles (config plus `show version` read as one device). Refuses path traversal, symlinks and zip bombs. One unreadable device never aborts the fleet. | **Built** |
+| 2 AI training module | `training/` `adapters/`, TRAIN console | Tiers 1–3: infer structure, propose a field mapping, admin confirms in a low-code console. Exported as a **signed, portable Vendor Adapter Pack** — data only, a fixed transform library, and a trust store that refuses an unknown signer. Measured cold on RouterOS with its parser held out: 7 of 9 fields. | **Built** |
+| 3 Multi-framework engine | `policy/` `rules/*.yaml` | A control is data. Each of the 13 controls maps to CIS v8, NIST SP 800-53, DISA STIG and ISO 27001, and `--framework` selects without re-parsing. A DISA **XCCDF 1.1/1.2 benchmark imports** into the same engine through explicit bindings. | **Built** |
+| 4 Reporting & PDF | `report/` `graph/` `ledger/` | A per-device PDF with identity (vendor, model, OS, **serial**), pass/fail by severity, line-cited evidence, vendor-specific remediation CLI, a what-if score, a coverage appendix, and a verification hash on every page. Remediation is ranked by the attack paths each fix severs. | **Built** |
+| 5 Vendor-agnostic scale | `schemas/ir`, parser registry | A frozen, versioned IR schema. New rules and frameworks need no code — and **neither does a new vendor**: it is taught in the console and shipped as a signed pack. | **Built** |
 
 ## 06 · Parsing cascade: the AI proposes, the engine decides
 
 **Tier 0**: deterministic parsers record provenance for every fact and account for every line.
 Unclaimed lines fall to **Tier 1**, which detects the grammar (brace, indent, flat) and builds a
-generic tree. Unknown nodes reach **Tier 2**, where a local model proposes a mapping such as
+generic tree. Unknown nodes reach **Tier 2**, which proposes a mapping such as
 `set admintimeout 10` → `mgmt.idle_timeout_min`. The mapping is applied as a deterministic rule,
 *never* as a judgement. At low confidence, **Tier 3** asks an administrator and signs the confirmed
 mapping into an adapter pack, so the next run handles that line at Tier 0. A low-confidence
 fingerprint runs no parser at all: an unknown device reports UNKNOWN instead of being misread.
 
-## 07 · Remediation that cannot lock you out
+## 07 · Crucible: demonstrated, not asserted
+
+A finding says a device *is* vulnerable. Crucible proves it. The IR renders to a disposable
+container twin on two internal bridges; stdlib probes attempt the thing the rule forbids
+(reach Telnet, read an SNMP community, complete an HTTP management login); the remediation is
+applied to the twin; the probe re-runs; and a final check confirms the fix did not lock the
+administrator out. Only then is a finding `DEMONSTRATED`, and the proof digest goes into the
+ledger leaf. A probe that fails to demonstrate leaves the finding `ASSERTED` — never a pass.
+
+## 08 · Remediation that cannot lock you out
 
 Fixes are ordered by safety, not severity: **0** establish the safe path (enable SSH) → **1** harden →
 **2** disable weak services (Telnet off) → **3** restrict management access. Pasted top to bottom, the
 administrator is never cut off.
 
-## 08 · Tamper-evident reports: the blockchain half, done honestly
+## 09 · Tamper-evident reports: the blockchain half, done honestly
 
 ```
 finding + evidence ─► SHA-256 leaf (domain-separated)
@@ -117,21 +130,26 @@ that means re-signing every later entry, which needs the issuing private key.
 There is one writer and no mutually distrusting peers, so a consensus blockchain would add
 operational weight and no integrity ([ADR 0006](../adr/0006-no-permissioned-blockchain.md)).
 
-## 09 · Technology
+## 10 · Technology
 
-**Today:** Python 3.11, PyYAML, ReportLab, cryptography, FastAPI; a plain HTML/JS console. One
-process, no database, no container. **Planned:** Ollama (local LLM), local embeddings, Next.js
-training GUI, NetworkX/Batfish, containerlab + VyOS.
+Python 3.11 with seven runtime dependencies: PyYAML, ReportLab, cryptography, FastAPI, Uvicorn,
+python-multipart, httpx. The console is plain HTML/CSS/JS served by the API, with no build step
+([ADR 0007](../adr/0007-plain-html-console.md)). The twin is an Alpine container built in this
+repository ([ADR 0008](../adr/0008-alpine-twin.md)). Optional: Ollama, on loopback only. One
+process, no database, no broker.
 
-## 10 · Measured on the current build
+## 11 · Measured on the current build
 
-| 101 | ≈ 1 s | 99.6% | 13 × 3 |
+| 224 | 6 | 98.1% | 1.00 / 0.90 |
 |:---:|:---:|:---:|:---:|
-| tests passing | 5 vendors audited, offline | mean line coverage | controls × frameworks |
+| tests passing | vendors audited, offline | mean line coverage | precision / recall |
 
-No accuracy figure is claimed yet. Precision and recall on a hand-labelled corpus are Phase 3
-([docs/16](../16-validation-plan.md)).
+Precision and recall come from `crucible validate` against six hand-labelled configurations:
+37 true positives, **0 false positives**, nothing missed as a PASS, 4 missed as UNKNOWN — a
+cautious miss tells the auditor to look, and is counted separately from a false negative. Fact
+accuracy is 53 of 53. **These labels have not yet been reviewed by a person, so the figures are
+provisional**, and the tool prints that caveat itself.
 
-| Phase 0 · done | Phase 1 · done | Phase 2 · next | Phase 3 | Phase 4 |
-|---|---|---|---|---|
-| IR schema and rule format frozen, specs, ADRs | config in → line-cited, signed PDF out | training loop, adapter packs, XCCDF, ISO | fleet graph, attack-path ranking, accuracy | Crucible: prove the finding and the fix on a twin |
+| Phase 0–1 · done | Phase 2 · done | Phase 3 · done | Phase 4 · done | Phase 5 · done | Open |
+|---|---|---|---|---|---|
+| IR and rule format frozen; config in → line-cited, signed PDF out | training loop, adapter packs, XCCDF, PAN-OS | fleet graph, attack-path ranking, measured accuracy | Crucible: prove the finding and the fix on a twin | bulk performance, isolated failures, drift, offline bundle | 60+ real configs; human review of the labels |
