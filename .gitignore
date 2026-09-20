@@ -9,6 +9,7 @@ build/
 dist/
 .venv/
 venv/
+.devtools/
 .python-version
 .pytest_cache/
 .mypy_cache/

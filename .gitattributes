@@ -1,6 +1,12 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Scripts run on the CI runner and inside containers. A CRLF line ending on a
+# shebang line is a "bad interpreter" failure, so these stay LF everywhere.
+*.sh             text eol=lf
+Dockerfile       text eol=lf
+labs/**/entrypoint.py text eol=lf
+
 # Device configurations are evidence: line numbers are cited in audit reports,
 # so these files must never be normalised, merged or diffed as ordinary text.
 corpus/**        -text -diff merge=binary

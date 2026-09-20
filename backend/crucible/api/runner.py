@@ -19,6 +19,7 @@ from typing import Any
 
 from crucible.adapters.pack import AdapterPack
 from crucible.common.canonical import canonical_bytes
+from crucible.common.errors import CrucibleError
 from crucible.graph import DeviceInput, FleetReport, build_fleet_report
 from crucible.ingest.bundle import load
 from crucible.ledger.chain import Ledger
@@ -58,6 +59,9 @@ class AuditJob:
     fleet: FleetReport | None = None
     #: One entry per device a twin was booted for, when --verify was asked for.
     sandbox: list[Any] = field(default_factory=list)
+    #: Devices that could not be audited at all, and why. A bad file in a
+    #: directory of two hundred must not take the other 199 with it.
+    failures: list[dict[str, str]] = field(default_factory=list)
     ruleset_size: int = 0
     rule_set_digest: str = ""
     ledger_path: str | None = None
@@ -93,6 +97,7 @@ class AuditJob:
             "totals": self.totals(),
             "rule_set_digest": self.rule_set_digest,
             "rules_evaluated": self.ruleset_size,
+            "failures": list(self.failures),
             "reports": [r.report.to_dict() for r in self.results],
         }
 
@@ -151,7 +156,15 @@ def run_audit(
         job.ledger_path = str(ledger.path)
 
     for index, bundle in enumerate(bundles, start=1):
-        parsed = build_ir(bundle, packs=packs, hold_out=hold_out)
+        try:
+            parsed = build_ir(bundle, packs=packs, hold_out=hold_out)
+        except CrucibleError as exc:
+            # One unreadable device is a failure for that device. Reporting
+            # nothing for the rest would turn a parser bug into a fleet-wide
+            # blind spot, and a job that "succeeded" with no findings is the
+            # silent pass in another costume.
+            job.failures.append({"device_id": bundle.device_id, "error": str(exc)})
+            continue
         evaluation = evaluate_device(parsed.ir, ruleset)
 
         # Crucible runs before the report is assembled, so a promoted finding

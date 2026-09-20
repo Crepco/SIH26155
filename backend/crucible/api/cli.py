@@ -13,6 +13,7 @@
     crucible tier2-eval tests/fixtures/devices/routeros-branch-01
     crucible stig-import U_Cisco_NDM_STIG.zip --bindings rules/stig/bindings/cisco.yaml
     crucible validate --labels corpus/labels/fixtures --devices tests/fixtures/devices
+    crucible drift march/core-sw-01.audit.json september/core-sw-01.audit.json
 
 Exit codes are meaningful, because this is a tool that belongs in a pipeline:
 
@@ -152,6 +153,12 @@ def _cmd_audit(args: argparse.Namespace) -> int:
             print(f"    {kind:9} {path}")
         print()
 
+    if job.failures:
+        print(f"  {len(job.failures)} device(s) could not be audited:")
+        for failure in job.failures:
+            print(f"    {failure['device_id']:24} {failure['error']}")
+        print()
+
     for run in job.sandbox:
         if run.verifications or run.error:
             print("  CRUCIBLE   findings proved against a disposable twin")
@@ -234,6 +241,11 @@ def _cmd_prove(args: argparse.Namespace) -> int:
 def _exit_code(job: object) -> int:
     """Non-zero when something that matters failed."""
     results = getattr(job, "results", [])
+    failures = getattr(job, "failures", [])
+    if failures and not results:
+        # Nothing could be audited at all: that is "could not run", not a
+        # clean bill of health.
+        return 2
     for result in results:
         for finding in result.report.findings:
             if finding.verdict is Verdict.FAIL and finding.severity in (
@@ -623,6 +635,36 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_drift(args: argparse.Namespace) -> int:
+    """What moved between two audits of one device.
+
+    Exit 1 when the posture regressed, so a pipeline can fail on it.
+    """
+    from crucible.report.drift import compare
+
+    def read(path: str) -> dict[str, Any]:
+        document = json.loads(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(document, dict):
+            # Pointing this at the wrong file is the likely mistake, so say so
+            # here rather than failing on a missing key three frames down.
+            raise ValueError(f"{path} is not an audit document")
+        return document
+
+    try:
+        report = compare(
+            read(args.before),
+            read(args.after),
+            before_ir=read(args.before_ir) if args.before_ir else None,
+            after_ir=read(args.after_ir) if args.after_ir else None,
+        )
+    except (OSError, ValueError) as exc:
+        print(f"crucible: {exc}", file=sys.stderr)
+        return 2
+
+    print(json.dumps(report.to_dict(), indent=2) if args.json else report.text())
+    return 1 if report.regressed else 0
+
+
 def _add_learning_options(command: argparse.ArgumentParser) -> None:
     command.add_argument(
         "--hold-out",
@@ -705,6 +747,14 @@ def _register_learning(sub: argparse._SubParsersAction[argparse.ArgumentParser])
     validate_cmd.add_argument("--all", action="store_true", help="list every disagreement")
     validate_cmd.add_argument("--json", action="store_true")
     validate_cmd.set_defaults(func=_cmd_validate)
+
+    drift = sub.add_parser("drift", help="what changed between two audits of one device")
+    drift.add_argument("before", help="the earlier <device>.audit.json")
+    drift.add_argument("after", help="the later <device>.audit.json")
+    drift.add_argument("--before-ir", help="the earlier <device>.ir.json, for fact-level drift")
+    drift.add_argument("--after-ir", help="the later <device>.ir.json")
+    drift.add_argument("--json", action="store_true")
+    drift.set_defaults(func=_cmd_drift)
 
 
 def build_parser() -> argparse.ArgumentParser:

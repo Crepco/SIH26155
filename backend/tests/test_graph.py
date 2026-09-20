@@ -72,8 +72,13 @@ def test_paths_are_only_reported_between_devices_that_can_reach_each_other():
     report = _report()
     for correlation in _by_id(report, "FLEET-EXPOSURE"):
         for path in correlation.paths:
-            assert len(path.hops) >= 2
             assert path.hops[0] == path.source
+            if len(path.hops) == 1:
+                # The service is exposed on the untrusted interface itself:
+                # there is no path to walk, which is worse, not better.
+                assert path.source == path.target
+            else:
+                assert path.target == path.hops[-1]
 
 
 # -- 2. NTP drift ---------------------------------------------------------------

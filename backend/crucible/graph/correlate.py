@@ -33,6 +33,11 @@ __all__ = ["Correlation", "Path", "correlate"]
 #: How far a path may run before we stop looking. Fleet topologies are wide,
 #: not deep, and a six-hop path nobody can follow is not actionable.
 MAX_HOPS = 6
+#: Entry points named per segment, and paths printed per finding. A report
+#: that lists four hundred equivalent ways in is not more convincing than one
+#: that lists ten and says how many there are.
+MAX_ENTRIES_PER_SEGMENT = 8
+MAX_PATHS_REPORTED = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,99 +135,50 @@ def _int(value: str) -> int:
         return -1
 
 
-def _exposure(graph: FleetGraph) -> list[Correlation]:
-    """One finding per exposed device and service, listing every way in."""
-    findings: list[Correlation] = []
-    entries = [
-        node
-        for node in graph.of_kind(NodeKind.INTERFACE)
-        if node.attrs.get("trust") == "untrusted" and not node.attrs.get("shutdown")
-    ]
-
-    for target in graph.of_kind(NodeKind.DEVICE):
-        services = [s for s in target.attrs.get("services", []) if s in MANAGEMENT_SERVICES]
-        if not services or target.attrs.get("mgmt_acl"):
-            continue
-        for service in services:
-            port = MANAGEMENT_SERVICES[service][1]
-            paths = [p for p in (_search(graph, e, target, port) for e in entries) if p]
-            if not paths:
-                continue
-            direct = any(p.hops[0] == p.hops[-1] for p in paths)
-            sources = sorted({p.source for p in paths})
-            findings.append(
-                Correlation(
-                    id=f"FLEET-EXPOSURE-{target.attrs['device_id']}-{service}".upper(),
-                    title=(
-                        f"{target.label}: {service} management is reachable from "
-                        + (
-                            "its own untrusted interface"
-                            if direct and len(paths) == 1
-                            else f"{len(sources)} untrusted entry point"
-                            f"{'' if len(sources) == 1 else 's'}"
-                        )
-                    ),
-                    severity="critical",
-                    summary=(
-                        f"{target.label} restricts management access with no ACL, and "
-                        f"{service} is reachable from "
-                        + ", ".join(sources)
-                        + ". Every device on those paths passes its own audit: no per-device "
-                        "benchmark can see a path that crosses devices."
-                    ),
-                    devices=sorted(
-                        {target.attrs["device_id"], *(p.source.split(":", 1)[0] for p in paths)}
-                    ),
-                    paths=paths,
-                    confidence="inferred" if any(p.inferred for p in paths) else "asserted",
-                    remediation=[
-                        f"Apply a management ACL on {target.label} (CIS-NET-1.4.1 prints the "
-                        "vendor commands), which severs every path at once.",
-                        *[f"Or filter {service} inbound on {p.source}" for p in paths[:3]],
-                    ],
-                    evidence=[
-                        {
-                            "device": target.attrs["device_id"],
-                            "ir_path": "mgmt.mgmt_acl",
-                            "detail": "no management ACL, so any reachable host may try",
-                        },
-                        *[
-                            {
-                                "device": p.source.split(":", 1)[0],
-                                "ir_path": "interfaces[]",
-                                "detail": f"untrusted interface {p.source.split(':', 1)[1]}",
-                            }
-                            for p in paths[:3]
-                        ],
-                    ],
-                )
-            )
-    return findings
-
-
 def _ingress_blocked(interface: Node, port: int) -> bool:
     """Traffic entering here is filtered for this port.
 
-    An ACL we could not read is not treated as a filter: the whole system fails
-    closed, and "there might be a filter" is not evidence that there is one.
+    An ACL we could not read is not treated as a filter: the whole system
+    fails closed, and "there might be a filter" is not evidence that there is
+    one.
     """
     return _permits(interface.attrs.get("acl_entries"), port) is False
 
 
-def _search(graph: FleetGraph, entry: Node, target: Node, port: int) -> Path | None:
-    """Breadth-first from an untrusted interface to a device's management service.
+def _entry_groups(graph: FleetGraph) -> dict[str, list[Node]]:
+    """Untrusted interfaces, grouped by the segment they sit on.
 
-    A device forwards traffic unless the interface the traffic *enters by*
-    filters the port. Adjacency comes from addressing, so any path that used an
-    inferred edge is marked inferred and reported at lower confidence.
+    Two interfaces on one segment reach the rest of the fleet identically, so
+    the search runs once per segment rather than once per interface. On a
+    fleet of two hundred devices that is the difference between a report in a
+    second and a report in two minutes.
     """
-    start = next((s for s, _e in graph.neighbours(entry.id, NodeKind.SEGMENT)), None)
-    if start is None or _ingress_blocked(entry, port):
-        return None
+    groups: dict[str, list[Node]] = {}
+    for node in graph.of_kind(NodeKind.INTERFACE):
+        if node.attrs.get("trust") != "untrusted" or node.attrs.get("shutdown"):
+            continue
+        for segment, _edge in graph.neighbours(node.id, NodeKind.SEGMENT):
+            groups.setdefault(segment.id, []).append(node)
+    return groups
 
-    source = f"{entry.attrs['device']}:{entry.label}"
-    queue: list[tuple[Node, tuple[str, ...], bool, int]] = [(start, (source, start.label), True, 0)]
+
+#: Where a sweep arrived: the interface, the hops after the entry point, and
+#: whether any hop along the way was inferred rather than read from a config.
+Arrival = tuple[Node, tuple[str, ...], bool]
+
+
+def _reachable(graph: FleetGraph, start_id: str, port: int) -> dict[str, Arrival]:
+    """One breadth-first sweep: every device reachable from a segment, and how.
+
+    Returns device id -> arrival. A device already reached by a shorter path is
+    not revisited, so the first arrival is the path reported.
+    """
+    start = graph.nodes.get(start_id)
+    if start is None:
+        return {}
+    found: dict[str, Arrival] = {}
     seen = {start.id}
+    queue: list[tuple[Node, tuple[str, ...], bool, int]] = [(start, (start.label,), False, 0)]
 
     while queue:
         segment, hops, inferred, depth = queue.pop(0)
@@ -235,14 +191,9 @@ def _search(graph: FleetGraph, entry: Node, target: Node, port: int) -> Path | N
             if device is None:
                 continue
             reached = inferred or bool(member_edge.inferred)
-            if device.id == target.id:
-                return Path(
-                    source=source,
-                    target=f"{target.attrs['device_id']}:{interface.label}",
-                    hops=(*hops, f"{device.attrs['device_id']}:{interface.label}"),
-                    inferred=reached,
-                )
-            # Otherwise the device forwards: leave by its other interfaces.
+            device_id = str(device.attrs["device_id"])
+            if device_id not in found:
+                found[device_id] = (interface, (*hops, f"{device_id}:{interface.label}"), reached)
             for onward, _edge in graph.neighbours(device.id, NodeKind.INTERFACE):
                 if onward.id == interface.id or onward.attrs.get("shutdown"):
                     continue
@@ -250,30 +201,110 @@ def _search(graph: FleetGraph, entry: Node, target: Node, port: int) -> Path | N
                     if next_segment.id in seen:
                         continue
                     seen.add(next_segment.id)
-                    ingress = f"{device.attrs['device_id']}:{interface.label}"
-                    # The entry interface is already the first hop; do not
-                    # print it twice when the traffic enters by it.
-                    prefix = (
-                        hops
-                        if hops[-2:-1] == (ingress,) or hops[0] == ingress
-                        else (
-                            *hops,
-                            ingress,
-                        )
-                    )
                     queue.append(
                         (
                             next_segment,
-                            (
-                                *prefix,
-                                f"{device.attrs['device_id']}:{onward.label}",
-                                next_segment.label,
-                            ),
+                            (*hops, f"{device_id}:{onward.label}", next_segment.label),
                             reached or bool(onward_edge.inferred),
                             depth + 1,
                         )
                     )
-    return None
+    return found
+
+
+def _exposure(graph: FleetGraph) -> list[Correlation]:
+    """One finding per exposed device and service, listing every way in."""
+    groups = _entry_groups(graph)
+    if not groups:
+        return []
+
+    ports = sorted({port for _path, port in MANAGEMENT_SERVICES.values()})
+    # segment -> port -> reachability map, computed once.
+    sweeps: dict[str, dict[int, dict[str, tuple[Node, tuple[str, ...], bool]]]] = {
+        segment_id: {port: _reachable(graph, segment_id, port) for port in ports}
+        for segment_id in groups
+    }
+
+    findings: list[Correlation] = []
+    for target in graph.of_kind(NodeKind.DEVICE):
+        services = [s for s in target.attrs.get("services", []) if s in MANAGEMENT_SERVICES]
+        if not services or target.attrs.get("mgmt_acl"):
+            continue
+        device_id = str(target.attrs["device_id"])
+
+        for service in services:
+            port = MANAGEMENT_SERVICES[service][1]
+            paths: list[Path] = []
+            for segment_id, entries in groups.items():
+                arrival = sweeps[segment_id][port].get(device_id)
+                if arrival is None:
+                    continue
+                interface, hops, inferred = arrival
+                for entry in entries[:MAX_ENTRIES_PER_SEGMENT]:
+                    if entry.attrs.get("device") == device_id and entry.id == interface.id:
+                        # The service is exposed on the untrusted interface itself.
+                        source = f"{entry.attrs['device']}:{entry.label}"
+                        paths.append(
+                            Path(source=source, target=source, hops=(source,), inferred=False)
+                        )
+                        continue
+                    source = f"{entry.attrs['device']}:{entry.label}"
+                    paths.append(
+                        Path(
+                            source=source,
+                            target=f"{device_id}:{interface.label}",
+                            hops=(source, *hops),
+                            inferred=inferred,
+                        )
+                    )
+            if not paths:
+                continue
+
+            sources = sorted({p.source for p in paths})
+            shown = paths[:MAX_PATHS_REPORTED]
+            findings.append(
+                Correlation(
+                    id=f"FLEET-EXPOSURE-{device_id}-{service}".upper(),
+                    title=(
+                        f"{target.label}: {service} management is reachable from "
+                        f"{len(sources)} untrusted entry point"
+                        f"{'' if len(sources) == 1 else 's'}"
+                    ),
+                    severity="critical",
+                    summary=(
+                        f"{target.label} restricts management access with no ACL, and "
+                        f"{service} is reachable from "
+                        + ", ".join(sources[:4])
+                        + (f" and {len(sources) - 4} more" if len(sources) > 4 else "")
+                        + ". Every device on those paths passes its own audit: no per-device "
+                        "benchmark can see a path that crosses devices."
+                    ),
+                    devices=sorted({device_id, *(p.source.split(":", 1)[0] for p in paths)})[:12],
+                    paths=shown,
+                    confidence="inferred" if any(p.inferred for p in paths) else "asserted",
+                    remediation=[
+                        f"Apply a management ACL on {target.label} (CIS-NET-1.4.1 prints the "
+                        "vendor commands), which severs every path at once.",
+                        *[f"Or filter {service} inbound on {source}" for source in sources[:3]],
+                    ],
+                    evidence=[
+                        {
+                            "device": device_id,
+                            "ir_path": "mgmt.mgmt_acl",
+                            "detail": "no management ACL, so any reachable host may try",
+                        },
+                        *[
+                            {
+                                "device": source.split(":", 1)[0],
+                                "ir_path": "interfaces[]",
+                                "detail": f"untrusted interface {source.split(':', 1)[1]}",
+                            }
+                            for source in sources[:3]
+                        ],
+                    ],
+                )
+            )
+    return findings
 
 
 # -- 2. NTP authentication drift ------------------------------------------------
