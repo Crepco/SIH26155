@@ -13,7 +13,7 @@
   Keep it in step with ARCHITECTURE.md beside it.
 -->
 <style>
-  @page { size: A4; margin: 10mm 11mm 9mm; }
+  @page { size: A4; margin: 8mm 10mm 7mm; }
 
   :root {
     --paper: #ffffff;
@@ -31,8 +31,8 @@
   html, body { margin: 0; background: var(--paper); color: var(--ink); }
   body {
     font-family: var(--serif);
-    font-size: 9.1pt;
-    line-height: 1.36;
+    font-size: 8.6pt;
+    line-height: 1.31;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -63,7 +63,7 @@
   /* ---- sections ---------------------------------------------------- */
   h2 {
     font-family: var(--mono); font-size: 7.8pt; font-weight: 700; letter-spacing: .09em;
-    text-transform: uppercase; margin: 3.2mm 0 1.3mm; padding-bottom: .6mm;
+    text-transform: uppercase; margin: 2.4mm 0 1.1mm; padding-bottom: .5mm;
     border-bottom: 1px solid var(--rule);
   }
   h2 .n { color: var(--muted); margin-right: 1.6mm; }
@@ -89,7 +89,7 @@
     letter-spacing: .06em; text-align: left; color: var(--muted);
     border-bottom: 1px solid var(--ink); padding: .8mm 1.6mm .8mm 0;
   }
-  td { vertical-align: top; padding: 1mm 1.6mm 1mm 0; border-bottom: 1px solid var(--rule); }
+  td { vertical-align: top; padding: .75mm 1.6mm .75mm 0; border-bottom: 1px solid var(--rule); }
   td.k { font-family: var(--mono); font-size: 7.4pt; font-weight: 700; }
   td.w code { white-space: normal; font-size: 7.2pt; }
   td.num { font-family: var(--mono); font-weight: 700; width: 5mm; }
@@ -136,12 +136,12 @@
   .facts span { font-family: var(--mono); font-size: 6.6pt; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 
   .road { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 1mm; }
-  .road div { border-top: 3px solid var(--ink); padding: 1.2mm 1.6mm 0 0; font-size: 8pt; }
+  .road div { border-top: 3px solid var(--ink); padding: 1mm 1.6mm 0 0; font-size: 7.2pt; }
   .road div.next { border-top: 3px dashed var(--muted); }
   .road .m { display: block; font-weight: 700; font-size: 7pt; text-transform: uppercase; letter-spacing: .05em; }
 
   .foot {
-    margin-top: 2.2mm; padding-top: 1.2mm; border-top: 1px solid var(--ink);
+    margin-top: 1.5mm; padding-top: 1mm; border-top: 1px solid var(--ink);
     font-family: var(--mono); font-size: 6.8pt; color: var(--muted);
     display: flex; justify-content: space-between;
   }
@@ -211,22 +211,22 @@
 
       <rect class="built" x="150" y="28" width="154" height="44"/>
       <text class="s" x="157" y="43"><tspan font-weight="700">T0</tspan> deterministic parser</text>
-      <text class="x" x="157" y="56">IOS EOS FortiOS Junos ROS</text>
+      <text class="x" x="157" y="56">IOS EOS FortiOS Junos ROS PAN-OS</text>
       <text class="ok" x="157" y="67">BUILT</text>
 
-      <rect class="spec" x="150" y="82" width="154" height="34"/>
+      <rect class="built" x="150" y="82" width="154" height="34"/>
       <text class="s" x="157" y="97"><tspan font-weight="700">T1</tspan> structural inference</text>
-      <text class="ph" x="157" y="109">PHASE 2</text>
+      <text class="ok" x="157" y="109">BUILT</text>
 
-      <rect class="spec" x="150" y="126" width="154" height="46"/>
-      <text class="s" x="157" y="141"><tspan font-weight="700">T2</tspan> local LLM <tspan font-weight="700">proposes</tspan></text>
+      <rect class="built" x="150" y="126" width="154" height="46"/>
+      <text class="s" x="157" y="141"><tspan font-weight="700">T2</tspan> proposer <tspan font-weight="700">proposes</tspan></text>
       <text class="x" x="157" y="153">a mapping, never a verdict</text>
-      <text class="ph" x="157" y="165">PHASE 2</text>
+      <text class="ok" x="157" y="165">BUILT</text>
 
-      <rect class="spec" x="150" y="182" width="154" height="50"/>
-      <text class="s" x="157" y="197"><tspan font-weight="700">T3</tspan> admin confirms in GUI</text>
+      <rect class="built" x="150" y="182" width="154" height="50"/>
+      <text class="s" x="157" y="197"><tspan font-weight="700">T3</tspan> admin confirms</text>
       <text class="x" x="157" y="209">→ signed Vendor Adapter Pack</text>
-      <text class="ph" x="157" y="222">PHASE 2</text>
+      <text class="ok" x="157" y="222">BUILT</text>
 
       <path class="ar d" d="M227,72 V80"/>
       <path class="ar d" d="M227,116 V124"/>
@@ -253,20 +253,22 @@
       <rect class="built" x="472" y="28" width="126" height="104"/>
       <text class="t" x="480" y="45">4 POLICY ENGINE</text>
       <text class="s" x="480" y="63">rules as YAML</text>
-      <text class="s" x="480" y="76">CIS · NIST · STIG</text>
-      <text class="x" x="480" y="93">PASS / FAIL /</text>
-      <text class="x" x="480" y="105">UNKNOWN (3-valued)</text>
-      <text class="ok" x="480" y="124">BUILT</text>
+      <text class="s" x="480" y="76">CIS · NIST</text>
+      <text class="s" x="480" y="88">STIG · ISO</text>
+      <text class="x" x="480" y="104">PASS / FAIL /</text>
+      <text class="x" x="480" y="115">UNKNOWN (3-valued)</text>
+      <text class="ok" x="480" y="127">BUILT</text>
 
       <!-- 5 fleet graph -->
-      <rect class="spec" x="472" y="148" width="126" height="84"/>
+      <rect class="built" x="472" y="148" width="126" height="84"/>
       <text class="t" x="480" y="165">5 FLEET GRAPH</text>
       <text class="s" x="480" y="183">cross-device</text>
-      <text class="s" x="480" y="196">attack paths</text>
-      <text class="ph" x="480" y="222">PHASE 3</text>
+      <text class="s" x="480" y="196">attack paths, ranked</text>
+      <text class="x" x="480" y="209">by paths severed</text>
+      <text class="ok" x="480" y="224">BUILT</text>
 
       <path class="ar"   d="M598,80 H620"/>
-      <path class="ar d" d="M598,190 C610,190 610,110 620,110"/>
+      <path class="ar"   d="M598,190 C610,190 610,110 620,110"/>
 
       <!-- 6 reporting -->
       <rect class="built" x="622" y="28" width="136" height="104"/>
@@ -282,13 +284,13 @@
       <!-- 7 crucible -->
       <rect class="spec" x="622" y="148" width="136" height="84"/>
       <text class="t" x="630" y="165">7 CRUCIBLE</text>
-      <text class="s" x="630" y="183">IR → VyOS twin</text>
+      <text class="s" x="630" y="183">IR → container twin</text>
       <text class="s" x="630" y="196">demonstrate → fix</text>
-      <text class="s" x="630" y="209">→ re-test</text>
-      <text class="ph" x="630" y="226">PHASE 4</text>
+      <text class="s" x="630" y="209">→ re-test → lock-out</text>
+      <text class="ok" x="630" y="226">BUILT · needs Docker</text>
     </svg>
     <figcaption>
-      <span>Solid = built and tested today · dashed = specified, with its phase</span>
+      <span>Every stage is built and tested · dashed = needs a Docker daemon, without which findings stay ASSERTED</span>
       <span>Unparsed lines fall down the cascade; nothing below stage 3 ever reads raw config text</span>
     </figcaption>
   </figure>
@@ -297,7 +299,7 @@
   <table>
     <tr><th></th><th style="width:38%">Invariant</th><th>Consequence</th></tr>
     <tr><td class="num">1</td><td><strong>The AI never decides pass or fail.</strong> It only writes parsers.</td>
-        <td>Model output is a candidate extraction rule, applied deterministically; the verdict comes from the YAML engine. <em>The AI proposes, the engine decides.</em></td></tr>
+        <td>A proposal is a candidate extraction rule, applied deterministically; the verdict comes from the YAML engine. A model is asked only to <em>choose</em> among candidates and point at the value token — never to write a pattern, so it cannot smuggle a regex into a pack.</td></tr>
     <tr><td class="num">2</td><td><strong>Every finding carries line-level evidence.</strong></td>
         <td>File, line number and raw text. This answers <em>“how do I know the AI didn’t invent this?”</em> structurally: the IR builder refuses a fact without a source line.</td></tr>
     <tr><td class="num">3</td><td><strong>Fail closed.</strong> Unparsed input can never produce a pass.</td>
@@ -322,9 +324,12 @@
       <h2><span class="n">04</span>Air-gapped by construction</h2>
       <p>A device configuration maps every ACL, trust relationship and credential hash. For
       NCIIPC, a cloud LLM API is a hard disqualifier, whatever the preference. The system makes <strong>zero outbound
-      calls</strong>. The console ships no web fonts or CDN assets, and a test fails the build if any
-      asset reaches off the host. The planned AI tiers run a local quantised model via Ollama with
-      local embeddings (ADR 0003). The current build needs no model at all.</p>
+      calls</strong>, with no cloud SDK in the dependency tree. The console ships no web fonts or CDN
+      assets, and a test fails the build if any asset reaches off the host. The default proposer is
+      lexical and needs no model; where one is wanted, the transport itself refuses any address that
+      is not loopback, so a proxy in the environment cannot capture a prompt (ADR 0003). The offline
+      bundle is verified by installing it with no package index and running a full audit from the
+      installed copy.</p>
     </div>
   </div>
 
@@ -340,20 +345,20 @@
   <table>
     <tr><th style="width:15%">Component</th><th style="width:15%">Where it lives</th><th>What it does</th><th style="width:11%">Status</th></tr>
     <tr><td class="k">1 Unified ingestion</td><td class="w"><code>ingest/ fingerprint/</code> console, <code>POST /audit</code></td>
-        <td>Single or bulk upload, directories, zip archives and device bundles (config plus <code>show version</code> read as one device). Refuses path traversal, symlinks and zip bombs. Weighted fingerprinting of six vendors with a published confidence.</td>
+        <td>Single or bulk upload, directories, zip archives and device bundles (config plus <code>show version</code> read as one device). Refuses path traversal, symlinks and zip bombs. Weighted fingerprinting with a published confidence. One unreadable device never aborts the fleet.</td>
         <td><span class="st built">Built</span></td></tr>
-    <tr><td class="k">2 AI training module</td><td class="w"><code>training/ adapters/</code> Next.js GUI</td>
-        <td>Tiers 1–3: infer structure, a local model proposes a field mapping, and the admin confirms in a low-code GUI. The result is exported as a <strong>signed, portable Vendor Adapter Pack</strong>, so one organisation teaches a vendor and every deployment can audit it next morning with no code shipped. Every uninterpreted line is already surfaced verbatim today; that list is the GUI’s input.</td>
-        <td><span class="st spec">Phase 2</span></td></tr>
+    <tr><td class="k">2 AI training module</td><td class="w"><code>training/ adapters/</code> TRAIN console</td>
+        <td>Tiers 1–3: infer structure, propose a field mapping, admin confirms in a low-code console. Exported as a <strong>signed, portable Vendor Adapter Pack</strong> — data only, a fixed transform library, a trust store that refuses an unknown signer — so one organisation teaches a vendor and every deployment audits it next morning with no code shipped. Measured cold on RouterOS with its own parser held out: <strong>7 of 9 fields</strong>.</td>
+        <td><span class="st built">Built</span></td></tr>
     <tr><td class="k">3 Multi-framework engine</td><td class="w"><code>policy/ rules/*.yaml</code></td>
-        <td>A control is data: an assertion over IR paths, a rationale, framework IDs and per-vendor fixes. Each of the 13 controls maps to CIS v8, NIST SP 800-53 and a DISA STIG ID, and <code>--framework</code> selects without re-parsing. ISO 27001 rules and an XCCDF importer (full STIG) come next.</td>
-        <td><span class="st part">CIS NIST STIG</span></td></tr>
-    <tr><td class="k">4 Reporting &amp; PDF</td><td class="w"><code>report/ ledger/</code></td>
-        <td>A per-device PDF with identity (vendor, model, OS, <strong>serial</strong>), pass/fail by severity, line-cited evidence, vendor-specific remediation CLI, a what-if score, a coverage appendix, and a verification hash on every page.</td>
+        <td>A control is data: an assertion over IR paths, a rationale, framework IDs and per-vendor fixes. Each of the 13 controls maps to CIS v8, NIST SP 800-53, DISA STIG and ISO 27001, and <code>--framework</code> selects without re-parsing. A DISA <strong>XCCDF 1.1/1.2 benchmark imports</strong> into the same engine through explicit bindings.</td>
+        <td><span class="st built">Built</span></td></tr>
+    <tr><td class="k">4 Reporting &amp; PDF</td><td class="w"><code>report/ graph/ ledger/</code></td>
+        <td>A per-device PDF with identity (vendor, model, OS, <strong>serial</strong>), pass/fail by severity, line-cited evidence, vendor-specific remediation CLI, a what-if score, a coverage appendix, and a verification hash on every page. Across a fleet, remediation is ranked by the attack paths each fix severs.</td>
         <td><span class="st built">Built</span></td></tr>
     <tr><td class="k">5 Vendor-agnostic scale</td><td class="w"><code>schemas/ir</code> parser registry</td>
-        <td>A frozen, versioned IR schema. New rules and frameworks need no code. A new vendor is one registered Tier-0 module today, and an imported adapter pack with no code once Phase 2 lands.</td>
-        <td><span class="st part">Foundation</span></td></tr>
+        <td>A frozen, versioned IR schema. New rules and frameworks need no code — and <strong>neither does a new vendor</strong>: it is taught in the console and shipped as a signed pack, which is exactly the “no manual code modification” requirement.</td>
+        <td><span class="st built">Built</span></td></tr>
   </table>
 
   <div class="cols">
@@ -361,21 +366,29 @@
       <h2><span class="n">06</span>Parsing cascade: the AI proposes, the engine decides</h2>
       <p><strong>Tier 0</strong>: deterministic parsers record provenance for every fact and account for
       every line. Unclaimed lines fall to <strong>Tier 1</strong>, which detects the grammar (brace, indent,
-      flat) and builds a generic tree. Unknown nodes reach <strong>Tier 2</strong>, where a local model
+      flat) and builds a generic tree. Unknown nodes reach <strong>Tier 2</strong>, which
       proposes a mapping such as <code>set admintimeout 10</code> → <code>mgmt.idle_timeout_min</code>. The
       mapping is applied as a deterministic rule, <em>never</em> as a judgement. At low confidence,
       <strong>Tier 3</strong> asks an administrator and signs the confirmed mapping into an adapter pack,
       so the next run handles that line at Tier 0. A low-confidence fingerprint runs no parser at all:
       an unknown device reports UNKNOWN instead of being misread.</p>
 
-      <h2><span class="n">07</span>Remediation that cannot lock you out</h2>
+      <h2><span class="n">07</span>Crucible: demonstrated, not asserted</h2>
+      <p>A finding says a device <em>is</em> vulnerable. Crucible proves it. The IR renders to a
+      disposable container twin; stdlib probes attempt the thing the rule forbids; the remediation is
+      applied; the probe re-runs; and a final check confirms the fix did not lock the administrator
+      out. Only then is a finding <span class="m">DEMONSTRATED</span>, and the proof digest goes into
+      the ledger leaf. A probe that fails to demonstrate leaves the finding
+      <span class="m">ASSERTED</span> — never a pass.</p>
+
+      <h2><span class="n">08</span>Remediation that cannot lock you out</h2>
       <p>Administrators ignore compliance reports when applying the fixes is scarier than the
       findings. Fixes are ordered by safety, not severity: <span class="m">0</span> establish the safe path
       (enable SSH) → <span class="m">1</span> harden → <span class="m">2</span> disable weak services (Telnet off) →
       <span class="m">3</span> restrict management access. Pasted top to bottom, the administrator is never cut off.</p>
     </div>
     <div>
-      <h2><span class="n">08</span>Tamper-evident reports: the blockchain half, done honestly</h2>
+      <h2><span class="n">09</span>Tamper-evident reports: the blockchain half, done honestly</h2>
       <p>An audit issued by a national body must be provably unaltered after issue. Each finding
       <em>and its evidence</em> is canonically serialised and hashed:</p>
       <div class="chain">finding + evidence ─► SHA-256 leaf  (domain-separated)
@@ -388,27 +401,31 @@ PDF footer ─► report id · ledger seq · verify hash</div>
       public key. There is one writer and no mutually distrusting peers, so a consensus blockchain would
       add operational weight and no integrity (ADR 0006).</p>
 
-      <h2><span class="n">09</span>Technology</h2>
-      <p><strong>Today:</strong> Python 3.11, PyYAML, ReportLab, cryptography, FastAPI; a plain HTML/JS
-      console. One process, no database, no container. <strong>Planned:</strong> Ollama (local LLM),
-      local embeddings, Next.js training GUI, NetworkX/Batfish, containerlab + VyOS.</p>
+      <h2><span class="n">10</span>Technology</h2>
+      <p>Python 3.11 with <strong>seven runtime dependencies</strong>: PyYAML, ReportLab, cryptography,
+      FastAPI, Uvicorn, python-multipart, httpx. The console is plain HTML/CSS/JS served by the API,
+      with no build step (ADR 0007). The twin is an Alpine container built in this repository
+      (ADR 0008). Optional: Ollama, on loopback only. One process, no database, no broker.</p>
     </div>
   </div>
 
-  <h2><span class="n">10</span>Measured on the current build <span style="font-weight:400;letter-spacing:.03em;color:var(--muted);text-transform:none">· no accuracy figure claimed yet: precision/recall on a labelled corpus is Phase 3</span></h2>
+  <h2><span class="n">11</span>Measured on the current build <span style="font-weight:400;letter-spacing:.03em;color:var(--muted);text-transform:none">· precision and recall from <code>crucible validate</code> against hand-labelled configurations</span></h2>
   <div class="facts">
-    <div><b>101</b><span>tests passing</span></div>
-    <div><b>≈1 s</b><span>5 vendors audited, offline</span></div>
-    <div><b>99.6%</b><span>mean line coverage</span></div>
-    <div><b>13 × 3</b><span>controls × frameworks</span></div>
+    <div><b>224</b><span>tests passing</span></div>
+    <div><b>1.00</b><span>precision · 0 false positives</span></div>
+    <div><b>0.90</b><span>recall · 0 missed as PASS</span></div>
+    <div><b>98.1%</b><span>mean line coverage</span></div>
   </div>
+  <p style="margin:.3em 0 0;font-size:7.6pt">37 true positives, <strong>no</strong> false positives, fact accuracy 53/53. The four
+  misses landed on UNKNOWN — the auditor is told to look, not that the device is fine — and are counted separately from a
+  false negative. <strong>The labels await human review, so these figures are provisional</strong>, as the tool itself prints.</p>
 
   <div class="road">
-    <div><span class="m">Phase 0 · done</span>IR schema and rule format frozen, specs, ADRs</div>
-    <div><span class="m">Phase 1 · done</span>config in → line-cited, signed PDF out</div>
-    <div class="next"><span class="m">Phase 2 · next</span>training loop, adapter packs, XCCDF, ISO</div>
-    <div class="next"><span class="m">Phase 3</span>fleet graph, attack-path ranking, accuracy</div>
-    <div class="next"><span class="m">Phase 4</span>Crucible: prove the finding and the fix on a twin</div>
+    <div><span class="m">Phase 0–1 · done</span>IR frozen; config in → signed PDF out</div>
+    <div><span class="m">Phase 2 · done</span>training loop, packs, XCCDF, PAN-OS</div>
+    <div><span class="m">Phase 3 · done</span>fleet graph, ranking, accuracy</div>
+    <div><span class="m">Phase 4–5 · done</span>Crucible twin; drift, offline bundle</div>
+    <div class="next"><span class="m">Open</span>60+ real configs; label review</div>
   </div>
 
   <div class="foot"><span>Source: github.com/Crepco/SIH26155 · full design in docs/02–11 and docs/adr</span><span>2 / 2</span></div>
