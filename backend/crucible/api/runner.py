@@ -56,6 +56,8 @@ class AuditJob:
     #: Cross-device findings. Built whenever more than one device is audited,
     #: because a single device has no fleet to correlate against.
     fleet: FleetReport | None = None
+    #: One entry per device a twin was booted for, when --verify was asked for.
+    sandbox: list[Any] = field(default_factory=list)
     ruleset_size: int = 0
     rule_set_digest: str = ""
     ledger_path: str | None = None
@@ -85,6 +87,7 @@ class AuditJob:
         return {
             "devices": len(self.results),
             "fleet": self.fleet.to_dict() if self.fleet else None,
+            "sandbox": [run.to_dict() for run in self.sandbox],
             "fleet_score": self.fleet_score,
             "mean_coverage": self.mean_coverage,
             "totals": self.totals(),
@@ -113,6 +116,8 @@ def run_audit(
     workdir: str | Path | None = None,
     packs: Sequence[AdapterPack] = (),
     hold_out: Sequence[str] = (),
+    verify: bool = False,
+    verify_only: str | None = None,
 ) -> AuditJob:
     """Audit every device under ``target``.
 
@@ -148,6 +153,22 @@ def run_audit(
     for index, bundle in enumerate(bundles, start=1):
         parsed = build_ir(bundle, packs=packs, hold_out=hold_out)
         evaluation = evaluate_device(parsed.ir, ruleset)
+
+        # Crucible runs before the report is assembled, so a promoted finding
+        # and its proof are inside the Merkle root rather than stapled on after.
+        sandbox_run = None
+        if verify:
+            from crucible.sandbox import verify_device
+
+            sandbox_run = verify_device(
+                parsed.ir,
+                bundle.device_id,
+                evaluation.findings,
+                ruleset,
+                only=verify_only,
+            )
+            job.sandbox.append(sandbox_run)
+
         report = build_report(
             report_id=_report_id(index, bundle.device_id),
             device_id=bundle.device_id,

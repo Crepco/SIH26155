@@ -333,6 +333,30 @@ def render_pdf(report: AuditReport, path: str | Path) -> Path:
             block.append(Paragraph(label, style["muted"]))
             block.append(Preformatted("\n".join(finding.missing_paths), style["mono"]))
 
+        if finding.proof:
+            proof = finding.proof
+            before = proof.get("before") or {}
+            proof_lines = [
+                f"probe     {proof.get('probe')}",
+                f"request   {before.get('request', '')}",
+                f"response  {before.get('response', '')[:150]}",
+            ]
+            if proof.get("after"):
+                proof_lines.append(
+                    "after fix "
+                    + (
+                        "the finding is closed"
+                        if proof.get("closed_by_remediation")
+                        else "STILL OPEN"
+                    )
+                )
+            proof_lines.append(f"digest    {proof.get('digest', '')}")
+            block.append(Spacer(1, 3))
+            block.append(
+                Paragraph("Proof - demonstrated against a disposable twin", style["muted"])
+            )
+            block.append(Preformatted("\n".join(proof_lines), style["mono"]))
+
         if finding.remediation:
             block.append(Spacer(1, 3))
             block.append(Paragraph(f"Remediation ({finding.remediation_target})", style["muted"]))

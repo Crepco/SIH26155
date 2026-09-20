@@ -138,6 +138,23 @@ def render_markdown(report: AuditReport) -> str:
             for path in finding.missing_paths:
                 add(f"- `{path}`")
             add("")
+        if finding.proof:
+            proof = finding.proof
+            before = proof.get("before") or {}
+            add("Proof - demonstrated against a disposable twin:")
+            add("")
+            add("```")
+            add(f"probe     {proof.get('probe')}")
+            add(f"request   {before.get('request', '')}")
+            add(f"response  {before.get('response', '')}")
+            if proof.get("after"):
+                after = proof["after"]
+                add(f"after fix {after.get('detail', '')}")
+                add(f"closed    {'yes' if proof.get('closed_by_remediation') else 'no'}")
+            add(f"digest    {proof.get('digest', '')}")
+            add("```")
+            add("")
+
         if finding.remediation:
             add(f"Remediation ({finding.remediation_target}):")
             add("")

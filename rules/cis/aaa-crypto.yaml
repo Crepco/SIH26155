@@ -12,6 +12,11 @@
     leaves, their access persists on every device that was never individually
     updated, which in practice means most of the fleet.
   remediation:
+    vyos:
+      - "set system login radius server 10.0.0.9 secret RADKEY"
+      - "set system login radius server 10.0.0.9 port 1812"
+      - "commit"
+      - "save"
     panos:
       - "configure"
       - "set shared server-profile tacplus TACACS server tac1 address 10.0.0.9 secret TACKEY"
@@ -42,6 +47,10 @@
     backup is a copy of the administrative credentials. Configuration backups
     are routinely stored with far weaker controls than the devices themselves.
   remediation:
+    vyos:
+      - "set system login user admin authentication plaintext-password NEWPASSWORD"
+      - "commit"
+      - "save"
     panos:
       - "configure"
       - "set mgt-config users admin password"
@@ -99,6 +108,10 @@
     This is the condition that converts a compromised endpoint in an access
     closet into reachability against the management plane.
   remediation:
+    vyos:
+      - "set interfaces ethernet eth1 firewall in name USER_IN"
+      - "commit"
+      - "save"
     panos:
       - "configure"
       - "set zone untrust network layer3 ethernet1/1"

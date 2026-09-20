@@ -148,7 +148,7 @@ def _leaf_material(finding: Finding) -> dict[str, Any]:
     the cited file, line and raw text rewritable without breaking the root -
     and those are exactly what makes the finding checkable.
     """
-    return {
+    material = {
         "rule_id": finding.rule_id,
         "verdict": finding.verdict.value,
         "state": finding.state.value,
@@ -156,6 +156,12 @@ def _leaf_material(finding: Finding) -> dict[str, Any]:
         "evidence": [e.to_dict() for e in finding.evidence],
         "missing_paths": finding.missing_paths,
     }
+    if finding.proof:
+        # docs/09: the leaf covers the digest of any proof artefact. Signing a
+        # DEMONSTRATED verdict without committing to the probe and its response
+        # would leave the interesting half rewritable.
+        material["proof_digest"] = finding.proof.get("digest", "")
+    return material
 
 
 def build_report(

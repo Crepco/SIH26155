@@ -132,6 +132,11 @@
     observer on the path, and is routinely the first service an internal
     scanner finds on a device that is otherwise well hardened.
   remediation:
+    vyos:
+      - "set service https listen-address 0.0.0.0"
+      - "delete service http"
+      - "commit"
+      - "save"
     panos:
       - "configure"
       - "set deviceconfig system service disable-https no"
@@ -168,6 +173,12 @@
     its administrative services. This is the single condition that turns one
     compromised workstation into fleet-wide administrative access.
   remediation:
+    vyos:
+      - "set firewall name MGMT-IN rule 10 action accept"
+      - "set firewall name MGMT-IN rule 10 source address 10.0.0.0/24"
+      - "set firewall name MGMT-IN default-action drop"
+      - "commit"
+      - "save"
     panos:
       - "configure"
       - "set deviceconfig system permitted-ip 10.0.0.0/24"

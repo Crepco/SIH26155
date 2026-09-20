@@ -1,7 +1,8 @@
 """Command line interface.
 
     crucible audit corpus/ --out reports/
-    crucible verify reports/ledger.jsonl
+    crucible verify reports/ledger.jsonl                     the ledger is unaltered
+    crucible verify --device core-sw-01/ --finding CIS-NET-1.1.1   prove it on a twin
     crucible rules --framework CIS
     crucible show corpus/core-sw-01/
 
@@ -83,6 +84,7 @@ def _cmd_audit(args: argparse.Namespace) -> int:
         workdir=args.out,
         packs=packs,
         hold_out=args.hold_out or [],
+        verify=args.verify,
     )
 
     if args.json:
@@ -150,6 +152,11 @@ def _cmd_audit(args: argparse.Namespace) -> int:
             print(f"    {kind:9} {path}")
         print()
 
+    for run in job.sandbox:
+        if run.verifications or run.error:
+            print("  CRUCIBLE   findings proved against a disposable twin")
+            print(run.text())
+
     if job.fleet is not None and job.fleet.correlations:
         fleet = job.fleet
         counts = fleet.counts()
@@ -183,6 +190,47 @@ def _cmd_audit(args: argparse.Namespace) -> int:
     return _exit_code(job)
 
 
+def _cmd_prove(args: argparse.Namespace) -> int:
+    """Boot a twin and demonstrate a finding against it.
+
+    Exit 0 when every requested finding was demonstrated and closed by the
+    printed fix, 1 when something was demonstrated and not closed, 2 when the
+    sandbox could not run at all - the same distinction the audit makes
+    between "found a problem" and "could not look".
+    """
+    from crucible.ingest.bundle import load
+    from crucible.pipeline import build_ir
+    from crucible.policy.engine import evaluate_device
+    from crucible.policy.ruleset import load_rules
+    from crucible.sandbox import verify_device
+
+    ruleset = load_rules(args.rules)
+    packs = [] if args.no_packs else _home(args).packs()
+    code = 0
+    for bundle in load(args.device):
+        parsed = build_ir(bundle, packs=packs, hold_out=args.hold_out or [])
+        evaluation = evaluate_device(parsed.ir, ruleset)
+        run = verify_device(
+            parsed.ir, bundle.device_id, evaluation.findings, ruleset, only=args.finding
+        )
+        if args.json:
+            print(json.dumps(run.to_dict(), indent=2))
+        else:
+            print()
+            print(run.text())
+            if run.not_modelled:
+                print("    the twin cannot model, so these stay ASSERTED:")
+                for path, reason in sorted(run.not_modelled.items()):
+                    print(f"      {path:28} {reason}")
+                print()
+        if not run.available:
+            print(f"crucible: {run.error}", file=sys.stderr)
+            return 2
+        if any(v.demonstrated and not v.closed for v in run.verifications):
+            code = max(code, 1)
+    return code
+
+
 def _exit_code(job: object) -> int:
     """Non-zero when something that matters failed."""
     results = getattr(job, "results", [])
@@ -197,6 +245,12 @@ def _exit_code(job: object) -> int:
 
 
 def _cmd_verify(args: argparse.Namespace) -> int:
+    if args.device:
+        return _cmd_prove(args)
+    if not args.ledger:
+        print("crucible: give a ledger to check, or --device to prove a finding", file=sys.stderr)
+        return 2
+
     from crucible.ledger.chain import Ledger
     from crucible.ledger.signing import VerifyingKey
 
@@ -672,12 +726,25 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--no-sign", action="store_true", help="skip ledger commit and signing")
     audit.add_argument("--all", action="store_true", help="list findings of every severity")
     audit.add_argument("--json", action="store_true", help="emit machine-readable output")
+    audit.add_argument(
+        "--verify",
+        action="store_true",
+        help="boot a twin per device and demonstrate the high and critical findings",
+    )
     _add_learning_options(audit)
     audit.set_defaults(func=_cmd_audit)
 
-    verify = sub.add_parser("verify", help="verify an audit ledger has not been altered")
-    verify.add_argument("ledger", help="path to ledger.jsonl")
+    verify = sub.add_parser(
+        "verify",
+        help="verify a ledger is unaltered, or prove a finding against a disposable twin",
+    )
+    verify.add_argument("ledger", nargs="?", help="path to ledger.jsonl")
     verify.add_argument("--key", help="issuing public key (default: alongside the ledger)")
+    verify.add_argument("--device", help="a device to boot a twin for, instead of a ledger check")
+    verify.add_argument("--finding", help="prove only this rule id")
+    verify.add_argument("--rules", default=DEFAULT_RULES)
+    verify.add_argument("--json", action="store_true")
+    _add_learning_options(verify)
     verify.set_defaults(func=_cmd_verify)
 
     rules = sub.add_parser("rules", help="list the loaded rule set")
