@@ -1,6 +1,6 @@
 # ADR 0005 — VyOS is the only emulation target
 
-**Status:** Accepted · 25 Aug 2026 · Track F
+**Status:** Superseded by [ADR 0008](0008-alpine-twin.md) · 25 Aug 2026 · Track F
 
 ## Context
 
