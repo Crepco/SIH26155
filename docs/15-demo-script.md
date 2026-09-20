@@ -31,8 +31,8 @@ exact sequence, with a recorded fallback. Live demos die.
 - **Do not explain the architecture during the demo.** The architecture slide comes before or
   after. During the demo, narrate consequences: what an attacker gets, what an administrator does.
 - **Say the coverage number out loud**, whatever it actually is on the file you demo. *We
-  understood 163 of 164 lines, and here is the one we did not.* No competing demo will volunteer a weakness, and volunteering it is
-  exactly what makes the rest credible.
+  understood 163 of 164 lines, and here is the one we did not.* No competing demo will volunteer
+  a weakness, and volunteering it is exactly what makes the rest credible.
 - **When the plug comes out, stop talking for two seconds.** Let the room notice.
 - **Never say the model decided something.** The model proposed a mapping; the engine decided.
   That distinction is the whole submission and it must be in the vocabulary of everyone on the

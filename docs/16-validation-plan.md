@@ -4,6 +4,35 @@ How we produce a real number instead of a claim. Most hackathon projects cannot 
 accurate is it?* — this one can, because the ground truth is built in Phase 0 before there is any
 code to be distracted by.
 
+> ## Results, 21 September 2026
+>
+> Run it yourself: `crucible validate --labels corpus/labels/fixtures --devices tests/fixtures/devices`
+>
+> | | Planned | Actual |
+> |---|---|---|
+> | Labelled configurations | 20 | **6** |
+> | Precision | — | **1.00** (37 true, 0 false positives) |
+> | Recall | — | **0.90** (0 missed as PASS, 4 missed as UNKNOWN) |
+> | Fact accuracy | — | **1.00** (53/53) |
+> | Verdict agreement | — | 0.95 |
+> | Citation agreement | — | 0.77 (another line may justify the same fact) |
+> | Mean coverage | — | 98.1% |
+> | UNKNOWN rate | — | 0.23 |
+>
+> **Two limits, stated before anyone asks.** The corpus is six shipped fixtures, not twenty real
+> configurations — `corpus/raw` is empty, and `make corpus` prints that count rather than a
+> claim. And **the labels were written with AI assistance and have not been reviewed by a
+> person**, so every figure above is provisional. The tool prints that caveat itself on every
+> run, which is the only way a caveat survives contact with a slide deck.
+>
+> Measuring was worth more than the number. It found four real bugs that inspection had not: an
+> assertion stricter than its own rule title, Arista eAPI assumed to be plaintext when it
+> defaults to HTTPS, and NTP and Junos services that needed a closed-world reading. Precision
+> reached 1.00 by fixing those, not by adjusting the labels.
+>
+> Sections 1, 2, 3 and 7 are done. Section 4 runs on demand rather than across a corpus.
+> Sections 5 and 6 are not done: nobody outside the team has read a generated PDF cold.
+
 ## 1. Multi-vendor consistency
 
 Run the same control — *disable Telnet, enforce SSHv2* — across four vendors and confirm identical
