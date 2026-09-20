@@ -49,6 +49,7 @@ _RE_IP_ADDRESS_CIDR = re.compile(r"^ip address (\S+/\d+)")
 _RE_ACCESS_GROUP = re.compile(r"^ip access-group (\S+) (in|out)")
 _RE_ACCESS_VLAN = re.compile(r"^switchport access vlan (\d+)")
 _RE_DESCRIPTION = re.compile(r"^description (.+)")
+_RE_DOTTED = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
 _RE_ACL_HEADER = re.compile(r"^ip access-list (?:(standard|extended) )?(\S+)")
 _RE_ACL_ENTRY = re.compile(r"^(?:(\d+) )?(permit|deny)\s+(.*)$")
 _RE_LOGGING_HOST = re.compile(r"^logging (?:host )?(\d+\.\d+\.\d+\.\d+)")
@@ -250,7 +251,7 @@ def _top_level(ctx: ParseContext, state: _State, line: Line, dialect: str) -> tu
             },
             number,
         )
-        ctx.set(f"aaa.local_users[{index}].hash", algorithm, number)
+        ctx.credential(index, algorithm, secret, number)
         return "", ""
 
     for pattern in (_RE_TACACS_HOST, _RE_RADIUS_HOST):
@@ -496,15 +497,15 @@ def _in_block(
             sequence, action, remainder = match.groups()
             acls = ctx.builder._sections.get("acls", [])
             if acls:
-                acls[-1]["entries"].append(
-                    {
-                        "seq": int(sequence) if sequence else len(acls[-1]["entries"]) * 10 + 10,
-                        "action": action,
-                        "raw": text,
-                        "match": remainder,
-                        "log": "log" in remainder.split(),
-                    }
-                )
+                entry = {
+                    "seq": int(sequence) if sequence else len(acls[-1]["entries"]) * 10 + 10,
+                    "action": action,
+                    "raw": text,
+                    "match": remainder,
+                    "log": "log" in remainder.split(),
+                }
+                entry.update(_normalise_ace(remainder))
+                acls[-1]["entries"].append(entry)
             ctx.claim(number)
             return
         _claim_if_benign(ctx, line)
@@ -521,6 +522,74 @@ def _in_block(
     if block == "vlan":
         _claim_if_benign(ctx, line)
         return
+
+
+#: Cisco spells a source or destination four ways. The IR keeps one.
+_PORT_OPS = ("eq", "neq", "gt", "lt", "range")
+
+
+def _take_address(tokens: list[str]) -> str:
+    """Consume one Cisco address form and return it as CIDR, or ``any``."""
+    word = tokens.pop(0)
+    if word == "any":
+        return "any"
+    if word == "host":
+        return f"{tokens.pop(0)}/32" if tokens else "any"
+    if "/" in word:
+        return word
+    if tokens and _RE_DOTTED.match(tokens[0]):
+        wildcard = tokens.pop(0)
+        return f"{word}/{_prefix_from_wildcard(wildcard)}"
+    return f"{word}/32"
+
+
+def _prefix_from_wildcard(wildcard: str) -> int:
+    """0.0.0.255 -> 24. A wildcard is an inverted mask."""
+    try:
+        octets = [255 - int(o) for o in wildcard.split(".")]
+    except ValueError:
+        return 32
+    bits = "".join(f"{o:08b}" for o in octets)
+    return bits.count("1")
+
+
+def _take_ports(tokens: list[str]) -> str | None:
+    if not tokens or tokens[0] not in _PORT_OPS:
+        return None
+    operator = tokens.pop(0)
+    if operator == "range" and len(tokens) >= 2:
+        low, high = tokens.pop(0), tokens.pop(0)
+        return f"{low}-{high}"
+    return f"{operator} {tokens.pop(0)}" if tokens else None
+
+
+def _normalise_ace(remainder: str) -> dict[str, object]:
+    """``tcp 10.0.0.0 0.0.0.255 any eq 22 log`` into IR fields.
+
+    Anything unrecognised leaves the field ``None``, which the graph reads as
+    "not known" rather than as "matches everything".
+    """
+    tokens = [t for t in remainder.split() if t != "log"]
+    fields: dict[str, object] = {
+        "protocol": None,
+        "src": None,
+        "dst": None,
+        "src_port": None,
+        "dst_port": None,
+    }
+    if not tokens:
+        return fields
+    fields["protocol"] = tokens.pop(0)
+    try:
+        if tokens:
+            fields["src"] = _take_address(tokens)
+        fields["src_port"] = _take_ports(tokens)
+        if tokens:
+            fields["dst"] = _take_address(tokens)
+        fields["dst_port"] = _take_ports(tokens)
+    except IndexError:
+        return fields
+    return fields
 
 
 def _claim_if_benign(ctx: ParseContext, line: Line) -> None:

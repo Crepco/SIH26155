@@ -44,6 +44,7 @@ def _pairs(remainder: str) -> dict[str, str]:
 def parse_routeros(ctx: ParseContext) -> None:
     interfaces: dict[str, dict[str, object]] = {}
     interface_lines: dict[str, int] = {}
+    comments: dict[str, str] = {}
 
     for line in ctx.lines():
         number = line.number
@@ -118,10 +119,13 @@ def parse_routeros(ctx: ParseContext) -> None:
             continue
 
         if command_path.startswith("/interface ethernet") and "comment" in values:
-            comment = values["comment"]
-            for name, entry in interfaces.items():
-                if entry.get("description") is None and name in text:
-                    entry["description"] = comment
+            # RouterOS writes the comment before the address that creates the
+            # interface record, so the comment is collected here and applied at
+            # the end. Matching against whatever existed at this point in the
+            # file attached the description to nothing at all.
+            port = values.get("default-name") or values.get("name")
+            if port:
+                comments[port] = values["comment"]
             ctx.claim(number)
             continue
 
@@ -152,4 +156,6 @@ def parse_routeros(ctx: ParseContext) -> None:
             ctx.claim(number)
 
     for name, entry in interfaces.items():
+        if entry.get("description") is None and name in comments:
+            entry["description"] = comments[name]
         ctx.append("interfaces", entry, interface_lines[name])

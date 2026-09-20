@@ -199,7 +199,7 @@ def parse_junos(ctx: ParseContext) -> None:
                 number,
                 secret=secret,
             )
-            ctx.set(f"aaa.local_users[{index}].hash", algorithm, number, secret=secret)
+            ctx.credential(index, algorithm, secret, number)
             if account != "root":
                 pending_user = None
             continue

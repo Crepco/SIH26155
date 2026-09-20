@@ -3,7 +3,7 @@
 !
 no aaa root
 !
-username admin privilege 15 role network-admin secret sha512 $6$leafsalt$Q1EXAMPLEhashvalue1234567890abcdef
+username admin privilege 15 role network-admin secret sha512 $6$abcsalt$R8dEXAMPLEhashvaluegoeshere0987654321
 !
 transceiver qsfp default-mode 4x10G
 !
@@ -53,8 +53,10 @@ interface Management1
    ip address 10.0.0.12/24
 !
 ip access-list SERVER_IN
-   10 permit tcp 10.0.0.0/24 any eq ssh
-   20 deny ip any any log
+   10 permit ip 10.0.0.0/8 any
+   20 permit tcp 10.0.0.0/24 any eq ssh
+   30 deny tcp 10.0.5.0/24 any eq telnet log
+   40 deny ip any any log
 !
 logging host 10.0.0.5
 logging trap informational

@@ -12,6 +12,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 
+from crucible.common.redaction import fingerprint
+from crucible.common.salt import deployment_salt
 from crucible.ingest.bundle import SourceFile
 from crucible.ir.builder import IRBuilder
 
@@ -73,6 +75,23 @@ class ParseContext:
 
     def append(self, path: str, value: object, line: int, **kwargs: object) -> int:
         return self.builder.append(path, value, file=self.filename, line=line, **kwargs)  # type: ignore[arg-type]
+
+    def credential(self, index: int, algorithm: str | None, secret: str | None, line: int) -> None:
+        """Record a local account's hash algorithm and its salted fingerprint.
+
+        The digest itself is never stored. The fingerprint is an HMAC under a
+        deployment-local salt, which is what lets the fleet graph say "the same
+        credential appears on thirty devices" without ever holding one.
+        """
+        self.set(f"aaa.local_users[{index}].hash", algorithm, line, secret=secret)
+        if secret:
+            self.set(
+                f"aaa.local_users[{index}].hash_fingerprint",
+                fingerprint(secret, deployment_salt()),
+                line,
+                claim=False,
+                secret=secret,
+            )
 
     def claim(self, line: int) -> None:
         self.builder.claim(self.filename, line, 0)

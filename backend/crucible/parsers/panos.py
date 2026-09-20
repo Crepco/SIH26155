@@ -239,12 +239,8 @@ def parse_panos(ctx: ParseContext) -> None:
             )
             understood.add(entry.line)
             if phash is not None and phash.text:
-                fact(
-                    f"aaa.local_users[{index}].hash",
-                    hash_algorithm_of(phash.text),
-                    phash,
-                    secret=phash.text,
-                )
+                ctx.credential(index, hash_algorithm_of(phash.text), phash.text, phash.line)
+                understood.add(phash.line)
             if superuser is not None:
                 understood.add(superuser.line)
 
