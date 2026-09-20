@@ -3,10 +3,11 @@
 Internal rounds are won on clarity and one memorable moment, not on feature count. Rehearse this
 exact sequence, with a recorded fallback. Live demos die.
 
-> **This script describes the finished system.** It includes live vendor training, the fleet
-> attack-path graph and a Crucible verification run - Phases 2 to 4, none of which are built yet.
-> For presenting the current build, use [18 — Internal round runbook](18-internal-round-runbook.md),
-> which covers only what actually runs.
+> **Everything in this script is now built** — live vendor training, the fleet attack-path graph
+> and a Crucible verification run. Two caveats before you rehearse it: the twin beat needs a
+> Docker daemon on the presenting machine, and the numbers quoted in the beats below are
+> illustrative. Say the ones the tool prints, not these. For the five-minute slot, use
+> [18 — Internal round runbook](18-internal-round-runbook.md).
 
 ## The run of show
 
@@ -29,8 +30,8 @@ exact sequence, with a recorded fallback. Live demos die.
 
 - **Do not explain the architecture during the demo.** The architecture slide comes before or
   after. During the demo, narrate consequences: what an attacker gets, what an administrator does.
-- **Say the coverage number out loud.** *We understood 98.1 per cent of this file and here are the
-  255 lines we did not.* No competing demo will volunteer a weakness, and volunteering it is
+- **Say the coverage number out loud**, whatever it actually is on the file you demo. *We
+  understood 163 of 164 lines, and here is the one we did not.* No competing demo will volunteer a weakness, and volunteering it is
   exactly what makes the rest credible.
 - **When the plug comes out, stop talking for two seconds.** Let the room notice.
 - **Never say the model decided something.** The model proposed a mapping; the engine decided.
@@ -39,7 +40,8 @@ exact sequence, with a recorded fallback. Live demos die.
 
 ## Preconditions checked before walking on
 
-- Containers pre-booted and warm. A cold VyOS boot on stage is thirty seconds of silence.
+- The twin image is built and warm (`docker image inspect crucible-twin:1`). Run one throwaway
+  verification before walking on: a cold boot on stage reads as a hang.
 - The unseen vendor file is one nobody has run through the tool before, and it is on the machine
   already, not on a USB stick.
 - The second instance for the adapter-pack import is already running and visible.
@@ -50,5 +52,10 @@ exact sequence, with a recorded fallback. Live demos die.
 ## The failure plan
 
 If the twin does not boot, say so, and go straight to the recorded run. *This is why we record
-it* is a perfectly good line, and it is far better than eight seconds of clicking. The fleet graph
-and the PDF are both stateless and always work; if anything else fails, move to them.
+it* is a perfectly good line, and far better than eight seconds of clicking. Better still, show
+what the tool does without a daemon: it prints `no Docker daemon: findings stay ASSERTED` and
+completes the audit. A finding that cannot be proven never becomes a pass, and that is a
+guarantee worth more on stage than the beat you lost.
+
+The fleet graph and the PDF are both stateless and always work; if anything else fails, move to
+them.
