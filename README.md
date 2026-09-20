@@ -34,6 +34,11 @@ you get this for each device:
 - **a signed PDF**: with a verification hash on every page, recorded in an Ed25519-signed,
   hash-chained ledger that shows any later edit
 
+Across a fleet it also correlates devices into an attack-path graph, ranks remediation by the
+paths each fix severs, and — where Docker is present — boots a disposable twin of a device to
+**demonstrate** a finding rather than assert it. `crucible drift` says what moved between two
+audits of the same device.
+
 This happens through a browser console or a CLI. There is no cloud model, no outbound call, and
 no database.
 
@@ -44,21 +49,42 @@ We would rather show a working foundation and an honest gap than claim features 
 | | Component | Status |
 |---|-----------|--------|
 | ✅ | Ingestion: single files, bulk upload, directories, device bundles, zip archives (safe against path traversal and zip bombs) | **Built** |
-| ✅ | Fingerprinting: vendor, OS, version, model and serial, with a confidence score (6 vendors recognised) | **Built** |
-| ✅ | Tier-0 parsers: **Cisco IOS, Arista EOS, Fortinet FortiOS, Juniper Junos, MikroTik RouterOS**, plus `show version` output | **Built** |
+| ✅ | Fingerprinting: vendor, OS, version, model and serial, with a confidence score | **Built** |
+| ✅ | Tier-0 parsers: **Cisco IOS, Arista EOS, Fortinet FortiOS, Juniper Junos, MikroTik RouterOS, Palo Alto PAN-OS**, plus `show version` output | **Built** |
 | ✅ | Vendor-neutral IR (JSON Schema v1.0.0, frozen), with per-fact provenance and line coverage accounting | **Built** |
-| ✅ | Three-valued policy engine: 13 controls written as YAML, each mapped to **CIS v8, NIST SP 800-53 and DISA STIG** | **Built** |
+| ✅ | Three-valued policy engine: 13 controls written as YAML, each mapped to **CIS v8, NIST SP 800-53, DISA STIG and ISO/IEC 27001** | **Built** |
+| ✅ | XCCDF 1.1/1.2 importer: a DISA benchmark becomes rules the engine loads, through explicit bindings | **Built** |
+| ✅ | Tier 1–3 learning: structural inference, a lexical proposer (optionally a local model on loopback), the training console, signed Vendor Adapter Packs with a trust store | **Built** |
+| ✅ | Fleet attack-path graph: cross-device correlation, reachability, remediation ranked by paths severed | **Built** |
+| ✅ | Crucible sandbox: boots a container twin, demonstrates the finding, applies the fix, re-tests, checks for lock-out | **Built** (needs Docker) |
 | ✅ | Reports: JSON, Markdown and PDF, with line-cited evidence, safety-ordered remediation and a what-if score | **Built** |
+| ✅ | Drift: what regressed, what was fixed, and which facts changed between two audits | **Built** |
 | ✅ | Tamper-evident ledger: Merkle-rooted reports, hash chain, Ed25519 signatures, `verify` command | **Built** |
 | ✅ | Audit console (browser) served by the API. No external assets, enforced by a test | **Built** |
-| ✅ | 101 tests, runnable without pytest | **Built** |
-| ⏳ | AI training module (Tiers 1–3): structural inference, a local-LLM mapping proposal, the training GUI, signed Vendor Adapter Packs | Specified · Phase 2 |
-| ⏳ | ISO/IEC 27001 rules; XCCDF importer for full STIG coverage; PAN-OS parser | Specified · Phase 2 |
-| ⏳ | Fleet attack-path graph: cross-device correlation, remediation ranked by paths severed | Specified · Phase 3 |
-| ⏳ | Crucible sandbox: boot a disposable digital twin, demonstrate the finding, verify the fix | Specified · Phase 4 |
+| ✅ | Offline installation bundle, built and then verified by installing it with no package index | **Built** |
+| ✅ | 224 tests, runnable without pytest | **Built** |
+| ⏳ | A corpus of real configurations at scale (60+), and human review of the labels behind the accuracy numbers | In progress |
+| ⏳ | Signing the bundle manifest; the multi-user compose deployment | Specified |
 
-An unrecognised vendor currently produces an honest `UNKNOWN` for every control. It is never
-reported as a pass. The learning loop that closes that gap is Phase 2.
+An unrecognised vendor produces an honest `UNKNOWN` for every control until someone teaches it
+one. It is never reported as a pass.
+
+### Measured, not claimed
+
+Against six hand-labelled configurations (`crucible validate`):
+
+| | |
+|---|---|
+| Precision | **1.00** — 37 true, 0 false positives |
+| Recall | **0.90** — nothing missed as a PASS; 4 missed as UNKNOWN |
+| Fact accuracy | **1.00** — 53 of 53 facts read with the labelled value |
+| Mean coverage | 98.1% |
+
+A miss that lands on `UNKNOWN` is a cautious miss: the auditor is told to look, not told it is
+fine. Those are counted separately from false negatives, which is the number that would matter.
+
+**These labels have not yet been reviewed by a person, so the figures are provisional** — the
+tool prints that caveat itself, and so does this README.
 
 ---
 
@@ -93,7 +119,7 @@ cd backend
 python tests/run_tests.py
 ```
 
-Expected last line: **`101 passed`**.
+Expected last line: **`224 passed`**.
 
 ### 3. Run the audit console
 
@@ -101,8 +127,8 @@ Expected last line: **`101 passed`**.
 python -m uvicorn crucible.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open **<http://127.0.0.1:8000>** and click **Audit the sample fleet**. That audits five real
-configurations from five vendors. Then:
+Open **<http://127.0.0.1:8000>** and click **Audit the sample fleet**. That audits six real
+configurations from six vendors. Then:
 
 1. Click **core-sw-01** in the fleet list.
 2. Expand **CIS-NET-1.1.1 (Telnet)**. The device's own config appears at its real line numbers,
@@ -112,6 +138,11 @@ configurations from five vendors. Then:
 4. Click the **UNKNOWN** filter. These are controls the engine refused to guess at.
 5. Scroll to **REMEDIATION**, then open the signed PDF for that device at
    <http://127.0.0.1:8000/reports/cisco-ios-core-01.pdf>.
+6. Switch to the **FLEET** view for the attack-path graph: which devices reach which, and which
+   single fix severs the most paths.
+7. Switch to the **TRAIN** view to see the lines no parser understood, grouped into families with
+   a proposed mapping for each, a preview of exactly what accepting one would extract, and the
+   pack it would be signed into.
 
 You can also upload your own configurations with **Choose files**. You can switch Wi-Fi off before
 any of this; nothing changes.
@@ -121,7 +152,7 @@ any of this; nothing changes.
 Run these from the `backend/` directory:
 
 ```bash
-# Audit the five sample devices, write JSON + Markdown + PDF per device and a signed ledger
+# Audit the six sample devices, write JSON + Markdown + PDF per device and a signed ledger
 python -m crucible.api.cli audit tests/fixtures/devices --rules ../rules/cis --out ../reports
 
 # Check the ledger has not been altered
@@ -135,6 +166,25 @@ python -m crucible.api.cli show tests/fixtures/devices/cisco-ios-core-01
 
 # The loaded rule set
 python -m crucible.api.cli rules --rules ../rules/cis
+
+# Measure precision and recall against the hand-labelled configurations
+python -m crucible.api.cli validate --labels ../corpus/labels/fixtures --devices tests/fixtures/devices
+
+# What changed between two audits of the same device (exit 1 if posture regressed)
+python -m crucible.api.cli drift before/core-sw-01.audit.json after/core-sw-01.audit.json
+```
+
+Three more, each needing something extra — a held-out vendor, a DISA benchmark, or Docker:
+
+```bash
+# Teach it a vendor: propose mappings for the lines nobody understood, then sign a pack
+python -m crucible.api.cli propose tests/fixtures/devices/routeros-branch-01 --hold-out mikrotik
+
+# Import a DISA STIG benchmark (XCCDF XML or the published zip)
+python -m crucible.api.cli stig-import <benchmark.zip> --bindings ../rules/stig/bindings
+
+# Prove a finding against a disposable twin instead of asserting it
+python -m crucible.api.cli verify --device tests/fixtures/devices/cisco-ios-core-01 --finding CIS-NET-1.1.1
 ```
 
 `audit` exits with code `1` when it finds serious findings and `2` when the audit could not run, so a
@@ -148,17 +198,17 @@ issuing private key.
 ### What a run looks like
 
 ```
-  CRUCIBLE 0.1.0   rules: 13 (digest 49c9878c30156358)
-  5 device(s)   fleet score 28%   mean coverage 99.6%
+  CRUCIBLE 0.1.0   rules: 13 (digest 21785aa38a98facc)
+  6 device(s)   fleet score 29%   mean coverage 97.3%
 
   core-sw-01
     cisco IOS 15.2(4)E10  serial FDO1234ABCD
-    score  [#######.................] 31%  -> 85% after remediation
-    checks fail 7  unknown 2  pass 4
+    score  [#######.................] 31%  -> 92% after remediation
+    checks fail 8  unknown 1  pass 4
     parsed 163/164 lines (99.4%)  1 uninterpreted
       FAIL critical CIS-NET-1.1.1  Telnet must be disabled on all management tr   running-config.txt:102
       FAIL critical CIS-NET-2.1.2  No default or well-known SNMP community stri   running-config.txt:87
-      UNKN high     CIS-NET-5.3.1  Weak SSH key exchange algorithms must not be   no line to cite
+      FAIL high     CIS-NET-1.3.1  Plaintext HTTP management interface must be    running-config.txt:39
 ```
 
 Every failure cites a line. Every `UNKN` is a control we refused to guess at.
@@ -171,7 +221,8 @@ Every failure cites a line. Every `UNKN` is a control we refused to guess at.
 | Port 8000 already in use | Add `--port 8010` and open that port instead |
 | Console page is blank | Hard refresh (Ctrl+Shift+R). The CLI prints the same findings |
 | `Form data requires "python-multipart"` | Install from `backend/requirements.txt`, not package by package |
-| `make` targets | Optional shortcuts (`make test`, `make demo`, `make serve`, `make verify`), for Linux/macOS |
+| `make` targets | Optional shortcuts (`make test`, `make demo`, `make serve`, `make verify`, `make airgap-check`, `make bundle`), for Linux/macOS and Git Bash |
+| Sandbox says "no Docker daemon" | Expected without Docker. Findings stay `ASSERTED`; the audit is otherwise unaffected |
 
 ---
 
@@ -190,23 +241,23 @@ config files (any vendor, single or bulk)
         |
         v
 [2] PARSING CASCADE
-     Tier 0  known vendor      -> deterministic parser                             built (5 vendors)
-     Tier 1  structural infer  -> generic config tree                              Phase 2
-     Tier 2  local LLM PROPOSES a mapping (never a verdict)                        Phase 2
-     Tier 3  training GUI      -> admin confirms -> signed Vendor Adapter Pack     Phase 2
+     Tier 0  known vendor      -> deterministic parser                             built (6 vendors)
+     Tier 1  structural infer  -> generic config tree                              built
+     Tier 2  proposer PROPOSES a mapping (never a verdict)                         built
+     Tier 3  training console  -> admin confirms -> signed Vendor Adapter Pack     built
         |
         v
 [3] NORMALISED SECURITY BASELINE MODEL (vendor-neutral JSON IR)                    built
         |                                   |
         v                                   v
-[4] POLICY ENGINE  (rules as YAML)      [5] FLEET GRAPH                            built | Phase 3
+[4] POLICY ENGINE  (rules as YAML)      [5] FLEET GRAPH                            built | built
         |                                   |
         +-----------------+-----------------+
                           v
 [6] REPORTING   per-device PDF, signed and hash-chained                           built
                           |
                           v
-[7] CRUCIBLE    disposable twin -> demonstrate -> remediate -> re-test             Phase 4
+[7] CRUCIBLE    disposable twin -> demonstrate -> remediate -> re-test             built
 ```
 
 The two-page summary is [docs/submission/ARCHITECTURE.md](docs/submission/ARCHITECTURE.md), and the full
@@ -218,29 +269,31 @@ These are guarantees built into the architecture, and the tests enforce them.
 
 | # | Invariant | Consequence |
 |---|-----------|-------------|
-| 1 | **The AI never decides pass or fail.** It only writes parsers. | Model output is a candidate extraction rule, applied deterministically. The AI proposes and the engine decides. This build has no model in the verdict path at all. |
+| 1 | **The AI never decides pass or fail.** It only writes parsers. | A proposal is a candidate extraction rule, applied deterministically. The AI proposes and the engine disposes. A model is never asked for a pattern, only to choose among candidates and point at the value token — so it cannot smuggle a regex into a pack. |
 | 2 | **Every finding carries line-level evidence.** | File, line number and raw text. Audits reproduce byte for byte. |
 | 3 | **Fail closed.** Unparsed input can never produce a pass. | Anything uninterpreted is reported `UNKNOWN` and counted against coverage. |
 | 4 | **Coverage is published, not hidden.** | Every report states `parsed N of M lines` and lists the rest verbatim. |
-| 5 | **Findings have three honest states, never two.** | `DEMONSTRATED` · `ASSERTED` · `UNKNOWN`. Until the sandbox lands, nothing is marked `DEMONSTRATED`. |
+| 5 | **Findings have three honest states, never two.** | `DEMONSTRATED` · `ASSERTED` · `UNKNOWN`. Only a finding proven against a live twin is `DEMONSTRATED`; with no Docker daemon, findings stay `ASSERTED` and never become a pass. |
 
 ## Mapping to the NTRO requirements
 
 | NTRO component | Where it lives | Status |
 |----------------|----------------|--------|
-| 1. Unified Ingestion Engine | `backend/crucible/ingest`, `fingerprint` · console **Choose files** · `POST /audit` | **Built.** Single and bulk upload, bundles, archives |
-| 2. AI-Powered Training Module | `backend/crucible/training` · [adapters/](adapters/) · [docs/06](docs/06-adapter-packs.md) | **Specified, Phase 2.** Today every uninterpreted line is already surfaced verbatim; that list is the training GUI's input |
-| 3. Multi-Framework Compliance Engine | `backend/crucible/policy` · [rules/](rules/) · [docs/04](docs/04-rule-format.md) | **Built for CIS / NIST / STIG** (13 controls, one parse, `--framework` selects). ISO and XCCDF import: Phase 2 |
-| 4. Actionable Intelligence & PDF Reporting | `backend/crucible/report`, `ledger` · [docs/10](docs/10-reporting.md) | **Built.** Identity incl. serial, severity, line evidence, vendor CLI, signed PDF |
-| 5. Vendor-Agnostic Scalability | [schemas/ir](schemas/ir/) · rules as data · parser registry · [docs/03](docs/03-ir-schema.md) | **Built foundation.** New rules need no code; new vendors will need no code once adapter packs land (Phase 2) |
+| 1. Unified Ingestion Engine | `backend/crucible/ingest`, `fingerprint` · console **Choose files** · `POST /audit` | **Built.** Single and bulk upload, bundles, archives. One unreadable device never aborts the fleet |
+| 2. AI-Powered Training Module | `backend/crucible/training` · [adapters/](adapters/) · [docs/06](docs/06-adapter-packs.md) | **Built.** Tiers 1–3: structural inference, a lexical proposer (a local model on loopback is optional), the training console, and signed adapter packs gated by a trust store |
+| 3. Multi-Framework Compliance Engine | `backend/crucible/policy` · [rules/](rules/) · [docs/04](docs/04-rule-format.md) | **Built.** 13 controls, one parse, `--framework` selects CIS v8 / NIST SP 800-53 / DISA STIG / ISO 27001. A DISA XCCDF benchmark imports into the same engine |
+| 4. Actionable Intelligence & PDF Reporting | `backend/crucible/report`, `graph`, `ledger` · [docs/10](docs/10-reporting.md) | **Built.** Identity incl. serial, severity, line evidence, vendor CLI, signed PDF, and remediation ranked by the attack paths each fix severs |
+| 5. Vendor-Agnostic Scalability | [schemas/ir](schemas/ir/) · rules as data · parser registry · [docs/03](docs/03-ir-schema.md) | **Built.** New rules need no code, and a new vendor needs no code either: it is taught through the training console and shipped as a signed pack |
 
 ## Why these design choices
 
 - **Air-gapped by construction.** The customer is NCIIPC. A device config is a blueprint of a
   network's defences, and sending it to a cloud API is disqualifying, whatever the preference.
   This build makes no outbound call, and a test fails the build if any console asset tries to
-  reach off the machine. The planned AI tiers use a local quantised model
-  ([ADR 0003](docs/adr/0003-local-models-only.md)).
+  reach off the machine. The default proposer needs no model at all; where one is wanted, it is a
+  local quantised model that the transport itself refuses to reach anywhere but loopback
+  ([ADR 0003](docs/adr/0003-local-models-only.md)). `scripts/check-airgap.sh` enforces this over
+  the dependency tree, and `scripts/verify-offline-bundle.sh` over a real installation.
 - **Rules are data, never code.** A control is a YAML file with its assertion, rationale, framework
   mappings and per-vendor remediation ([ADR 0002](docs/adr/0002-rules-as-data.md)).
 - **A signed hash chain, not a blockchain.** There is one writer and no peers, so consensus would add
@@ -259,7 +312,10 @@ These are guarantees built into the architecture, and the tests enforce them.
 | [schemas/](schemas/) | Versioned JSON Schemas for the IR, rules and adapter packs |
 | [docs/](docs/) | Specifications, execution plan, ADRs. Start at [docs/00-index.md](docs/00-index.md) |
 | [adapters/](adapters/) | Vendor Adapter Pack format and a worked example |
-| [labs/](labs/), [deploy/](deploy/) | containerlab topologies and the planned deployment stack (later phases) |
+| [labs/](labs/) | The Crucible twin image, and containerlab topologies for generating corpus configurations |
+| [corpus/](corpus/) | Hand-labelled ground truth behind the accuracy numbers |
+| [deploy/](deploy/) | [Offline bundle](deploy/OFFLINE-BUNDLE.md) and deployment notes |
+| [scripts/](scripts/) | `check-airgap.sh`, `corpus-status.sh`, `build-offline-bundle.sh`, `verify-offline-bundle.sh` |
 
 ## Roadmap
 
@@ -267,9 +323,11 @@ These are guarantees built into the architecture, and the tests enforce them.
 |-------|----------|-------|
 | 0 | Foundations: IR schema frozen, rule format, specs, ADRs | Done |
 | 1 | Core pipeline end to end: real config in, line-cited signed PDF out | **Done** |
-| 2 | The AI layer: structural inference, local-LLM mapping proposals, training GUI, adapter packs, XCCDF | Next |
-| 3 | Fleet graph and attack-path-ranked remediation; measured precision/recall on a labelled corpus | Planned |
-| 4 | Crucible: `crucible verify` confirms a finding live against a twin, offline | Planned |
+| 2 | The AI layer: structural inference, mapping proposals, training console, adapter packs, XCCDF | **Done** |
+| 3 | Fleet graph and attack-path-ranked remediation; measured precision/recall | **Done** |
+| 4 | Crucible: `crucible verify` confirms a finding live against a twin, offline | **Done** |
+| 5 | Hardening: bulk performance, isolated failures, drift, the offline bundle | **Done** |
+| — | A corpus of 60+ real configurations, and human review of the labels | In progress |
 
 Details: [docs/12-execution-plan.md](docs/12-execution-plan.md) · [CHANGELOG.md](CHANGELOG.md) ·
 [docs/14-risk-register.md](docs/14-risk-register.md)
