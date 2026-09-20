@@ -26,6 +26,9 @@ if str(ROOT) not in sys.path:
 # Tests never touch the operator's real deployment state: installed packs and
 # trusted publishers in ~/.crucible would otherwise change audit results.
 os.environ["CRUCIBLE_HOME"] = tempfile.mkdtemp(prefix="crucible-test-home-")
+# A fixed salt so credential fingerprints - and therefore the fleet report and
+# every hash derived from it - are identical on every run and every machine.
+os.environ.setdefault("CRUCIBLE_FINGERPRINT_SALT", "test-salt-not-a-secret")
 
 
 @lru_cache(maxsize=1)
