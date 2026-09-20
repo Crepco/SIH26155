@@ -119,6 +119,7 @@ function showJob(job, select = 0) {
   renderFleet();
   renderDevice();
   loadLedger();
+  document.dispatchEvent(new CustomEvent("crucible:job", { detail: job }));
 }
 
 /* -- views ---------------------------------------------------------------- */

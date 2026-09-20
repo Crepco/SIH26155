@@ -19,6 +19,7 @@
   <nav class="views" id="views" aria-label="Views">
     <button class="views__tab" data-view="audit" aria-current="page">AUDIT</button>
     <button class="views__tab" data-view="train" aria-current="false">TRAIN</button>
+    <button class="views__tab" data-view="fleet" aria-current="false">FLEET</button>
   </nav>
   <span class="instrument__spacer"></span>
   <span class="instrument__stat" id="stat-rules">rules <b>—</b></span>
@@ -219,7 +220,56 @@
   </section>
 </main>
 
+<!-- ── fleet: cross-device correlation ──────────────────────────────────── -->
+<main class="bench hidden" data-view-panel="fleet" aria-label="Fleet graph">
+  <section class="sheet" id="f-empty">
+    <div class="section">
+      <h2 class="section__label"><span>FLEET</span><span>cross-device</span></h2>
+      <p class="lede">
+        Audit more than one device and this view fills in. Every tool in this category audits
+        device by device; breaches are emergent. A device can be entirely compliant while the
+        network it sits in is trivially breachable, and that is what this view is for.
+      </p>
+    </div>
+  </section>
+
+  <div id="f-body" class="hidden">
+    <section class="sheet">
+      <div class="section">
+        <h2 class="section__label"><span>WHAT NO SINGLE AUDIT CAN SEE</span></h2>
+        <p class="lede" id="f-headline">—</p>
+        <div class="tally" id="f-counts"></div>
+        <div id="f-graph"></div>
+        <p class="notice">
+          Devices over the segments they share. Red links face something untrusted. Select a
+          finding below to light up the path it takes. Adjacency is inferred from addressing,
+          so a finding that depends on it is marked INFERRED rather than asserted.
+        </p>
+      </div>
+    </section>
+
+    <section class="sheet">
+      <div class="section">
+        <h2 class="section__label"><span>FIXES, IN THE ORDER THAT MATTERS</span></h2>
+        <p class="notice">
+          Ranked by attack paths severed, not by severity count. That is the difference between
+          a list of findings and a plan somebody can act on before lunch.
+        </p>
+        <div id="f-fixes"></div>
+      </div>
+    </section>
+
+    <section class="sheet">
+      <div class="section">
+        <h2 class="section__label"><span>CROSS-DEVICE FINDINGS</span></h2>
+        <div class="register" id="f-findings"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
 <script src="/static/app.js"></script>
 <script src="/static/train.js"></script>
+<script src="/static/fleet.js"></script>
 </body>
 </html>

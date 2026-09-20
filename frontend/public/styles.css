@@ -726,6 +726,34 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .packs td { border-bottom: 1px solid var(--rule); padding: .45rem .5rem .45rem 0; vertical-align: top; }
 .packs small { color: var(--muted); }
 
+
+/* --- fleet graph ---------------------------------------------------------- */
+
+.fg { width: 100%; height: auto; display: block; margin: .6rem 0; }
+
+/* An attack path is one long line of fixed-width text: let it scroll rather
+   than wrap, because a wrapped path is unreadable. */
+.excerpt { overflow-x: auto; }
+.fg-device rect {
+  fill: var(--sheet);
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+.fg-device.is-lit rect { fill: #fdf2f1; stroke: var(--fail); stroke-width: 2; }
+.fg-name { font-family: var(--mono); font-size: 11px; font-weight: 700; fill: var(--ink); }
+.fg-meta { font-family: var(--mono); font-size: 9px; fill: var(--muted); }
+.fg-segment rect { fill: #e9eef1; stroke: var(--rule); }
+.fg-segment.is-lit rect { fill: #fdf2f1; stroke: var(--fail); stroke-width: 1.6; }
+.fg-segment text { font-family: var(--mono); font-size: 10px; fill: var(--ink); }
+.fg-link { stroke: var(--rule); stroke-width: 1.2; }
+.fg-link.is-untrusted { stroke: var(--fail); stroke-dasharray: 4 3; }
+.fg-link.is-lit { stroke: var(--fail); stroke-width: 2.4; stroke-dasharray: none; }
+.fg-cred { fill: var(--warn); }
+
+.state--asserted { color: var(--warn); }
+ul.plain { margin: .2rem 0 0; padding-left: 1.1rem; font-size: 12.5px; }
+ul.plain li { margin-bottom: .2rem; }
+
 @media (max-width: 860px) {
   .family__row { grid-template-columns: 3.5rem minmax(0, 1fr); }
   .family__row .proposal, .family__row .state { grid-column: 2; }
