@@ -93,6 +93,12 @@ plugins = ["pydantic.mypy"]
 module = ["reportlab.*"]
 ignore_missing_imports = true
 
+# Copied into the sandbox container beside probes.py and run there, where the
+# import is a plain sibling module rather than a package member.
+[[tool.mypy.overrides]]
+module = ["crucible.sandbox._probe_runner"]
+ignore_errors = true
+
 [[tool.mypy.overrides]]
 module = ["crucible.report.pdf"]
 disallow_subclassing_any = false
