@@ -1,6 +1,7 @@
 # 06 — Vendor Adapter Packs
 
-**Owner: Track C. Format freezes in Phase 2.**
+**Owner: Track C. Format frozen and implemented.** Packs are built, signed, exported,
+imported and gated by a trust store; `crucible pack` and `crucible trust` manage them.
 
 The training loop does not merely persist a mapping to a local database. It emits a **signed,
 portable Vendor Adapter Pack** — a self-contained YAML file describing one vendor grammar and its

@@ -56,6 +56,11 @@ is the Phase 2 definition of done for exactly that reason.
 **Pass criterion:** under three minutes from cold file to clean audit, with the trained mappings
 surviving export and import.
 
+**Result:** passes, and it is a test rather than a demo — `test_train_a_vendor_cold_export_import_and_audit_elsewhere`
+holds MikroTik's parser out of the build, trains from the residue, signs a pack, imports it into a
+second instance and audits there. Measured cold on RouterOS, Tier 2 recovers 7 of 9 fields
+(`crucible tier2-eval`). The two it misses go to a human at Tier 3, which is the design.
+
 ## 3. Ground-truth accuracy
 
 Precision and recall against the 20 hand-labelled configurations. Quote the number, whatever it
