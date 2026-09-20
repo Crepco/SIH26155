@@ -1,5 +1,33 @@
 # 12 — Execution plan
 
+> ## Status, 21 September 2026
+>
+> This document is the plan as written on 25 August, kept as a record. What actually happened:
+>
+> | Phase | Planned | Outcome |
+> |-------|---------|---------|
+> | 0 · Foundations | 25–31 Aug | **Done** |
+> | 1 · Core pipeline | 1–7 Sep | **Done** |
+> | 2 · The AI layer | 8–14 Sep | **Done** |
+> | 3 · Differentiators | 15–19 Sep | **Done** |
+> | — · Idea submission | 20 Sep | **Submitted** |
+> | 4 · Crucible sandbox | 21 Sep onward | **Done** |
+> | 5 · Hardening | Pre-finale | **Done** |
+>
+> Three places where the build deviated from the plan below, each deliberate:
+>
+> * **13 CIS controls, not ~40.** Each one is mapped to four frameworks, carries per-vendor
+>   remediation, and is checked against hand-labelled ground truth. Forty thinner controls would
+>   have read better and meant less. The XCCDF importer is the answer to breadth.
+> * **The twin is an Alpine container built here, not VyOS via containerlab**
+>   ([ADR 0008](adr/0008-alpine-twin.md)). We control what is installed, it boots in a second,
+>   and it ships in the offline bundle.
+> * **The console is plain HTML served by the API, not Next.js**
+>   ([ADR 0007](adr/0007-plain-html-console.md)). No build step, and nothing to fetch.
+>
+> Still open, and named as such in the README: a corpus of 60+ real configurations, and human
+> review of the labels behind the accuracy numbers.
+
 Today is 25 August 2026. Idea submission closes 20 September 2026 — roughly three and a half
 weeks. The internal college round comes before that. This plan is cut against those real dates,
 not a generic ten-week roadmap.
