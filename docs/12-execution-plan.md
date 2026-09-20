@@ -24,6 +24,12 @@
 >   and it ships in the offline bundle.
 > * **The console is plain HTML served by the API, not Next.js**
 >   ([ADR 0007](adr/0007-plain-html-console.md)). No build step, and nothing to fetch.
+> * **Bulk audits are not parallelised**, though Phase 5 called for it. Profiling a 200-device job
+>   found 110.9s of its 2m6s in fleet correlation, which was running one path search per
+>   (entry point, target, service). One breadth-first sweep per (segment, port) gives identical
+>   findings, and **200 devices now audit in 2.6s — 13 ms each**. Adding a worker pool to that
+>   would buy nothing and cost a broker, a process model and a class of bug we currently cannot
+>   have. Fixing the algorithm was the cheaper answer.
 >
 > Still open, and named as such in the README: a corpus of 60+ real configurations, and human
 > review of the labels behind the accuracy numbers.
