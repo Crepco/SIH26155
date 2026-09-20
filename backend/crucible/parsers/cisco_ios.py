@@ -101,6 +101,7 @@ class _State:
         self.mgmt_acl: tuple[str, int] | None = None
         self.interfaces: list[dict[str, object]] = []
         self.interface_lines: list[int] = []
+        self.ntp_line: int | None = None
 
 
 def _finish_interface(ctx: ParseContext, state: _State) -> None:
@@ -324,6 +325,7 @@ def _top_level(ctx: ParseContext, state: _State, line: Line, dialect: str) -> tu
     match = _RE_NTP_SERVER.match(text)
     if match:
         ctx.append("ntp.servers", match.group(1), number)
+        state.ntp_line = state.ntp_line or number
         if " key " in text:
             ctx.set("ntp.authenticated", True, number, claim=False)
         return "", ""
@@ -441,10 +443,23 @@ def _in_block(
         return
 
     if block == "management-api" and dialect == "arista":
+        # EOS serves the eAPI over HTTPS unless "protocol http" is configured.
+        # Reading "no shutdown" as plaintext HTTP failed a device that had done
+        # nothing wrong; the protocol lines below are what decide it.
         if text == "no shutdown":
-            ctx.set("mgmt.http_enabled", True, number)
+            ctx.set("mgmt.https_enabled", True, number)
             return
         if text == "shutdown":
+            ctx.set("mgmt.https_enabled", False, number)
+            ctx.set("mgmt.http_enabled", False, number, claim=False)
+            return
+        if text.startswith("protocol http") and "https" not in text:
+            ctx.set("mgmt.http_enabled", True, number)
+            return
+        if text.startswith("protocol https"):
+            ctx.set("mgmt.https_enabled", True, number)
+            return
+        if text.startswith("no protocol http") and "https" not in text:
             ctx.set("mgmt.http_enabled", False, number)
             return
         _claim_if_benign(ctx, line)
@@ -623,6 +638,12 @@ def _resolve_management_plane(ctx: ParseContext, state: _State, dialect: str) ->
     elif state.telnet_server is not None:
         enabled, line = state.telnet_server
         ctx.set("mgmt.telnet_enabled", enabled, line, claim=False)
+
+    # Closed world: NTP servers were configured and no authentication keyword
+    # appeared anywhere in a file we otherwise read. On IOS and EOS that means
+    # unauthenticated, which is a finding rather than a silence.
+    if state.ntp_line is not None and not ctx.builder.has("ntp.authenticated"):
+        ctx.set("ntp.authenticated", False, state.ntp_line, claim=False)
 
     if state.mgmt_acl is not None:
         name, line = state.mgmt_acl

@@ -80,6 +80,16 @@ class IRBuilder:
     def raw_line(self, filename: str, line: int) -> str:
         return self._lines.get(filename, {}).get(line, "")
 
+    def has(self, path: str) -> bool:
+        """Whether any tier has written this path.
+
+        Lets a parser make a closed-world reading at the end of a file: if the
+        NTP section was understood and no authentication keyword appeared
+        anywhere, the device does not authenticate NTP. Only ever used to
+        record the *insecure* value, so it can produce a FAIL and never a PASS.
+        """
+        return path in self._provenance
+
     def is_claimed(self, filename: str, line: int) -> bool:
         return line in self._claimed.get(filename, {})
 

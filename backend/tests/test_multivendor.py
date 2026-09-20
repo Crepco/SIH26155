@@ -39,14 +39,18 @@ def test_telnet_semantics_agree_across_vendors():
     """``no ip telnet server`` and ``set admin-telnet enable`` mean the same thing.
 
     Cisco, FortiOS and RouterOS each leave Telnet reachable in these fixtures and
-    each say so in a completely different syntax. Arista disables it. Junos never
-    mentions it, which must read as UNKNOWN rather than as either answer.
+    each say so in a completely different syntax. Arista disables it explicitly.
+
+    Junos never mentions Telnet, and that is an answer on Junos rather than a
+    silence: a service absent from ``system services`` is not running. The
+    parser reads it that way only because it understood the whole block, and it
+    cites the line the block opens on.
     """
     assert _evaluate("cisco-ios-core-01", "mgmt.telnet_enabled").value is True
     assert _evaluate("fortios-fw-01", "mgmt.telnet_enabled").value is True
     assert _evaluate("routeros-branch-01", "mgmt.telnet_enabled").value is True
     assert _evaluate("arista-leaf-01", "mgmt.telnet_enabled").value is False
-    assert _evaluate("junos-edge-01", "mgmt.telnet_enabled").value is UNKNOWN
+    assert _evaluate("junos-edge-01", "mgmt.telnet_enabled").value is False
 
 
 def test_idle_timeout_normalises_three_different_spellings():

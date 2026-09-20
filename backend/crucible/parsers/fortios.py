@@ -51,6 +51,7 @@ def _unquote(value: str) -> str:
 
 @register("fortinet")
 def parse_fortios(ctx: ParseContext) -> None:
+    ntp_lines: list[int] = []
     stack: list[str] = []
     current_edit: str | None = None
     interface: dict[str, object] | None = None
@@ -214,6 +215,7 @@ def parse_fortios(ctx: ParseContext) -> None:
             continue
 
         if section.startswith("system ntp"):
+            ntp_lines.append(number)
             if key == "server":
                 ctx.append("ntp.servers", value, number)
                 continue
@@ -248,6 +250,12 @@ def parse_fortios(ctx: ParseContext) -> None:
             ctx.claim(number)
 
     flush_interface()
+
+    # Closed world: the NTP section was read and no authentication setting
+    # appeared in it. FortiOS spells that "no authentication", which is a
+    # finding rather than a silence.
+    if ntp_lines and not ctx.builder.has("ntp.authenticated"):
+        ctx.set("ntp.authenticated", False, ntp_lines[0], claim=False)
 
     if snmp_enabled and community_is_default is None:
         # SNMP is on with no community in the export - we know it runs, we do

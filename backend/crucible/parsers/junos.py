@@ -50,6 +50,8 @@ _KNOWN_IRRELEVANT = {
 
 @register("juniper")
 def parse_junos(ctx: ParseContext) -> None:
+    services_line: int | None = None
+    ntp_line: int | None = None
     stack: list[str] = []
     interface: dict[str, object] | None = None
     interface_line = 0
@@ -97,6 +99,13 @@ def parse_junos(ctx: ParseContext) -> None:
             name = match.group(1).strip()
             stack.append(name)
             current = path()
+
+            # Remember where "system services" opened: everything Junos runs is
+            # listed inside it, so what is absent from it is not running.
+            if current == "system services":
+                services_line = number
+            if current == "system ntp":
+                ntp_line = ntp_line or number
 
             if len(stack) == 2 and stack[0] == "interfaces":
                 flush_interface()
@@ -155,10 +164,12 @@ def parse_junos(ctx: ParseContext) -> None:
 
         if current == "system services" and head == "ssh":
             ctx.set("mgmt.ssh.enabled", True, number)
+            services_line = services_line or number
             continue
 
         if current == "system services" and head == "telnet":
             ctx.set("mgmt.telnet_enabled", True, number)
+            services_line = services_line or number
             continue
 
         if current.startswith("system services web-management https"):
@@ -175,6 +186,7 @@ def parse_junos(ctx: ParseContext) -> None:
             continue
 
         if current == "system ntp":
+            ntp_line = ntp_line or number
             if head == "server":
                 ctx.append("ntp.servers", parts[1], number)
                 continue
@@ -242,3 +254,17 @@ def parse_junos(ctx: ParseContext) -> None:
             ctx.claim(number)
 
     flush_interface()
+
+    # Closed world, and only inside blocks this parser fully understood. On
+    # Junos a service that is not in "system services" is not running, so the
+    # absence of a telnet statement is an answer rather than a silence. The
+    # same reasoning covers web-management and NTP authentication. Each records
+    # only the insecure-or-absent reading, so it can produce a FAIL and never
+    # a PASS.
+    if services_line is not None:
+        if not ctx.builder.has("mgmt.telnet_enabled"):
+            ctx.set("mgmt.telnet_enabled", False, services_line, claim=False)
+        if ctx.builder.has("mgmt.https_enabled") and not ctx.builder.has("mgmt.http_enabled"):
+            ctx.set("mgmt.http_enabled", False, services_line, claim=False)
+    if ntp_line is not None and not ctx.builder.has("ntp.authenticated"):
+        ctx.set("ntp.authenticated", False, ntp_line, claim=False)

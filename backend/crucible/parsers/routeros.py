@@ -45,6 +45,7 @@ def parse_routeros(ctx: ParseContext) -> None:
     interfaces: dict[str, dict[str, object]] = {}
     interface_lines: dict[str, int] = {}
     comments: dict[str, str] = {}
+    ntp_lines: list[int] = []
 
     for line in ctx.lines():
         number = line.number
@@ -90,6 +91,7 @@ def parse_routeros(ctx: ParseContext) -> None:
 
         if command_path.startswith("/system ntp client servers") and "address" in values:
             ctx.append("ntp.servers", values["address"], number)
+            ntp_lines.append(number)
             continue
 
         if command_path.startswith("/system logging action") and "remote" in values:
@@ -154,6 +156,11 @@ def parse_routeros(ctx: ParseContext) -> None:
         # and is counted against coverage.
         if command_path.split()[0] in _KNOWN_IRRELEVANT_ROOTS:
             ctx.claim(number)
+
+    # Closed world: an export lists every NTP setting in use, so servers with
+    # no authentication among them means unauthenticated.
+    if ntp_lines and not ctx.builder.has("ntp.authenticated"):
+        ctx.set("ntp.authenticated", False, ntp_lines[0], claim=False)
 
     for name, entry in interfaces.items():
         if entry.get("description") is None and name in comments:

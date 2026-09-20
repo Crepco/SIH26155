@@ -46,7 +46,11 @@
   title: "No default or well-known SNMP community strings may be configured"
   frameworks: [CIS-v8, NIST-SP800-53:IA-5, STIG-NET0893, ISO27001:A.5.17, ISO27001:A.8.9]
   severity: critical
-  assert: empty(snmp.communities)
+  # The IR stores a marker per community, never the string: "default" for one
+  # of the well-known values, "custom" otherwise. Asserting empty() would fail
+  # a device for having any community at all, which is not what this control
+  # says - CIS-NET-2.1.1 is the control that wants v3.
+  assert: not any(snmp.communities, community in [default])
   rationale: >
     Default communities such as public and private are the first thing any
     scanner tries. A single surviving default community on one device in the
