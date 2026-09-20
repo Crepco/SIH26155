@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# STIG bindings - the human decision that turns a prose check into an assertion.
+#
+#   crucible stig-import U_Cisco_IOS-XE_Router_NDM_V3Rx_STIG.zip \
+#     --bindings rules/stig/bindings/cisco-ios-xe-ndm.yaml \
+#     --out rules/stig/cisco-ios-xe-ndm.yaml
+#
+# A STIG control is written for a human reviewer: its check text says what to
+# look at, not what to compute. A binding says "this control is decided by this
+# assertion over the IR". Controls with no binding are imported into the
+# catalogue as MANUAL REVIEW and are never evaluated - and never counted as
+# passes. That honesty is the whole point; do not bind a control you have not
+# read, and do not invent an assertion that only approximates it.
+#
+# Each entry:
+#   stig_id           the control's <version>, e.g. CISC-ND-000010   (or)
+#   vuln_id           the group id, e.g. V-215807
+#   assert            an expression over IR paths - the same language as rules/cis
+#   remediation_from  reuse another rule's per-vendor fix, by rule id
+#   remediation       or write the fix per render target, inline
+#   frameworks        extra identifiers to carry (CCIs are imported automatically)
+#   applies_to        {vendor: [cisco]} when the control is platform-specific
+#   severity          override the imported CAT mapping, if you must justify it
+# ---------------------------------------------------------------------------
+
+benchmark: REPLACE_WITH_BENCHMARK_ID
+
+bindings: []
+  # - stig_id: CISC-ND-000010
+  #   assert: mgmt.idle_timeout_min <= 10
+  #   remediation_from: CIS-NET-1.2.4
+  #   applies_to: {vendor: [cisco]}

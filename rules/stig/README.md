@@ -1,47 +1,53 @@
-# DISA STIG rules
+# DISA STIGs
 
-**Generated, not hand-authored. Do not edit files in this directory by hand.**
+STIGs ship as machine-readable XCCDF XML, so one importer yields hundreds of real controls
+instead of hand-typed ones. `crucible stig-import` reads XCCDF 1.1 and 1.2, from the XML or
+straight from the zip DISA publishes.
 
-DISA publishes STIGs as machine-readable XCCDF XML. One importer turns an official benchmark
-release into hundreds of real controls. This is the highest-leverage half-day in the entire plan:
-it is the difference between *claiming* multi-framework support and *demonstrating* it.
+```bash
+crucible stig-import U_Cisco_IOS-XE_Router_NDM_V3Rx_STIG.zip \
+  --bindings rules/stig/bindings/cisco-ios-xe-ndm.yaml \
+  --out rules/stig/cisco-ios-xe-ndm.yaml
+```
 
-## Import flow
+## Why an import is not the same as coverage
 
-    official XCCDF XML release
-            |
-            v
-    XCCDF importer (lxml, external entities disabled)
-            |
-            +--> rule id, title, severity, control identifiers   -> emitted directly
-            +--> check content                                   -> mapped to an IR assertion
-            +--> fix text                                        -> mapped to remediation, per target
-            |
-            v
-    rules/stig/<benchmark>-<version>.yaml   (generated, checked in, reviewed)
+A STIG control is written for a human reviewer. Its check text is prose — *"in the presence of
+the reviewer, the SA should enter the following command"* — not an expression over parsed facts.
+Importing 300 controls and reporting them as evaluated would be the silent-pass failure this
+project exists to prevent, wearing a compliance badge.
 
-## Why the output is checked in
+So an import produces two artefacts:
 
-The generated YAML is committed rather than produced at runtime for three reasons: an air-gapped
-deployment cannot fetch a benchmark; a reviewer can diff exactly what changed between benchmark
-releases; and the ledger needs the rule set that produced a report to be reproducible years
-later.
+| Artefact | Contents |
+|----------|----------|
+| `<name>.yaml` | Rules for the controls a **binding** connects to an IR assertion. Evaluated like any other rule, carrying the STIG id, the Vuln id and the CCIs as framework identifiers. |
+| `<name>.catalogue.json` | Every control in the benchmark, with its status: `evaluated` or `manual review - no binding to an IR assertion`. |
 
-## Mapping is not fully automatic, and we say so
+The count is reported both ways, every time:
 
-XCCDF check content is prose plus vendor-specific check commands. Where the importer can derive a
-mechanical assertion over the IR it does so. Where it cannot, the control is imported with its
-identity, severity and text intact but marked as requiring manual assertion authoring, and it
-does not silently evaluate to PASS. Unmapped controls appear in the report as UNKNOWN with a
-reason, consistent with invariant 3.
+```
+BIND DNS STIG 4: 51 controls, 2 machine-checkable, 49 require manual review
+```
 
-## Licensing
+## Writing a binding
 
-DISA STIG content and NIST SP 800-53 control text are United States Government publications and
-may be quoted. CIS Benchmark text may not, and never appears in this directory.
+Copy [`bindings/_template.yaml`](bindings/_template.yaml). Bind a control only after reading both
+the control text and the IR field. A binding that approximates a control is worse than no binding,
+because the report will claim a verdict the standard does not support.
 
-## Provenance
+## What is here today
 
-Every generated file records the source benchmark title, release, publication date and the SHA-256
-of the XCCDF file it was produced from, so that a report citing `STIG-NET0993` can be traced to an
-exact upstream document.
+No network-device binding set ships yet. The Cisco and Juniper NDM STIGs are distributed by DISA
+as zips from `dl.dod.cyber.mil`, which the build environment could not reach; rather than guess at
+control identifiers, the importer is shipped with its format verified against two **real** DISA
+benchmarks (BIND 9 v4r1.16 and Mozilla Firefox v5r1, in `backend/tests/fixtures/xccdf/`), and the
+binding file is left for whoever has the network STIG in hand.
+
+That is a half-day of reading per benchmark, and it is the honest half-day.
+
+## Framework identifiers
+
+An imported rule carries `STIG:<stig id>`, `STIG-VULN:<vuln id>` and one `CCI:<cci>` per
+identifier in the benchmark. `crucible audit --framework STIG` selects them, and the report groups
+by the family name `DISA-STIG`.

@@ -10,6 +10,7 @@
     crucible pack list | show | export | import | remove | verify
     crucible trust list | add publisher.pub | remove KEYID | key
     crucible tier2-eval tests/fixtures/devices/routeros-branch-01
+    crucible stig-import U_Cisco_NDM_STIG.zip --bindings rules/stig/bindings/cisco.yaml
 
 Exit codes are meaningful, because this is a tool that belongs in a pipeline:
 
@@ -30,7 +31,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from crucible import __version__
 from crucible.common.errors import CrucibleError
@@ -467,6 +468,39 @@ def _cmd_tier2_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_stig_import(args: argparse.Namespace) -> int:
+    """Import a DISA STIG, and say plainly how much of it a machine can check."""
+    from crucible.policy.ruleset import load_rules
+    from crucible.policy.xccdf import import_benchmark, load_benchmark, load_bindings
+
+    benchmark = load_benchmark(args.benchmark)
+    bindings = load_bindings(args.bindings) if args.bindings else []
+    reference: list[Any] = list(load_rules(args.rules)) if Path(args.rules).exists() else []
+    result = import_benchmark(benchmark, bindings, reference_rules=reference)
+
+    print()
+    print(f"  {result.summary()}")
+    print(f"  severities: {result.benchmark.by_severity()}")
+    if not bindings:
+        print("  no bindings given, so nothing is evaluated: every control needs one")
+    print()
+
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(result.rules_yaml(), encoding="utf-8")
+        catalogue = out.with_suffix(".catalogue.json")
+        catalogue.write_text(result.catalogue_json(), encoding="utf-8")
+        print(f"  rules      {out}")
+        print(f"  catalogue  {catalogue}")
+        print()
+    else:
+        for rule in result.rules:
+            print(f"    {rule['severity']:8} {rule['id']:22} {rule['title'][:60]}")
+        print()
+    return 0
+
+
 def _add_learning_options(command: argparse.ArgumentParser) -> None:
     command.add_argument(
         "--hold-out",
@@ -528,6 +562,17 @@ def _register_learning(sub: argparse._SubParsersAction[argparse.ArgumentParser])
     tier2.add_argument("--json", action="store_true")
     _add_model_options(tier2)
     tier2.set_defaults(func=_cmd_tier2_eval)
+
+    stig = sub.add_parser(
+        "stig-import", help="import a DISA STIG benchmark (XCCDF XML or the published zip)"
+    )
+    stig.add_argument("benchmark", help="path to the XCCDF file or DISA zip")
+    stig.add_argument("--bindings", help="YAML binding controls to IR assertions")
+    stig.add_argument(
+        "--rules", default=DEFAULT_RULES, help="rules whose remediation may be reused"
+    )
+    stig.add_argument("--out", help="write the imported rules here (catalogue written beside it)")
+    stig.set_defaults(func=_cmd_stig_import)
 
 
 def build_parser() -> argparse.ArgumentParser:

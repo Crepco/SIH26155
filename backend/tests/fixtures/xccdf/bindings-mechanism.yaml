@@ -1,0 +1,19 @@
+# Test-only bindings.
+#
+# These connect two controls of the BIND DNS STIG to IR assertions purely to
+# exercise the import mechanism: the IR models network device posture, not a
+# name server, so these are NOT a real compliance mapping and are not shipped.
+# A real binding set is written per benchmark by someone who has read both the
+# control and the IR field. See rules/stig/README.md.
+
+benchmark: BIND_DNS
+
+bindings:
+  - stig_id: DNS0485
+    assert: defined(logging.servers) and not empty(logging.servers)
+    remediation_from: CIS-NET-3.1.1
+    frameworks: [NIST-SP800-53:AU-4]
+
+  - vuln_id: V-4479
+    assert: mgmt.telnet_enabled == false
+    severity: critical
