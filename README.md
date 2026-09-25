@@ -62,7 +62,7 @@ We would rather show a working foundation and an honest gap than claim features 
 | ✅ | Tamper-evident ledger: Merkle-rooted reports, hash chain, Ed25519 signatures, `verify` command | **Built** |
 | ✅ | Audit console (browser) served by the API. No external assets, enforced by a test | **Built** |
 | ✅ | Offline installation bundle, built and then verified by installing it with no package index | **Built** |
-| ✅ | 224 tests, runnable without pytest | **Built** |
+| ✅ | 227 tests, runnable without pytest | **Built** |
 | ⏳ | A corpus of real configurations at scale (60+), and human review of the labels behind the accuracy numbers | In progress |
 | ⏳ | Signing the bundle manifest; the multi-user compose deployment | Specified |
 
@@ -139,7 +139,7 @@ cd backend
 python tests/run_tests.py
 ```
 
-Expected last line: **`224 passed`**.
+Expected last line: **`227 passed`**.
 
 ### 3. Run the audit console
 

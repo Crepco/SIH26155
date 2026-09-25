@@ -144,7 +144,7 @@ broker.
 
 ## 11 · Measured on the current build
 
-| 224 | 6 | 98.1% | 1.00 / 0.90 |
+| 227 | 6 | 98.1% | 1.00 / 0.90 |
 |:---:|:---:|:---:|:---:|
 | tests passing | vendors audited, offline | mean line coverage | precision / recall |
 

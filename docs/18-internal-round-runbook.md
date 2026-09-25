@@ -32,7 +32,7 @@ cd backend
 python tests/run_tests.py
 ```
 
-Expect `224 passed`. If anything fails, stop and fix it — do not present a red suite.
+Expect `227 passed`. If anything fails, stop and fix it — do not present a red suite.
 
 ---
 
@@ -49,7 +49,7 @@ rm -rf ../reports          # Windows: rmdir /s /q ..\reports
 
 Checklist:
 
-- [ ] `224 passed` from the test suite.
+- [ ] `227 passed` from the test suite.
 - [ ] The audit prints six devices and exits with code `1`.
 - [ ] `verify` prints **INTACT**.
 - [ ] `../reports` deleted, so nothing is stale on stage.
@@ -177,7 +177,7 @@ Put this on a slide. Say it plainly.
 > IR, the rule engine, line-cited reports, the signed ledger — and the three things we said last
 > time were only specified. It learns a vendor it has never seen, from an administrator, and
 > ships that as a signed pack. It correlates a fleet into attack paths. And it boots a disposable
-> twin to prove a finding before you touch production. 224 tests, including one that fails the
+> twin to prove a finding before you touch production. 227 tests, including one that fails the
 > build if any asset on that page tries to reach the internet.
 >
 > Two things are honestly open. Our accuracy numbers — precision 1.00, recall 0.90 — come from

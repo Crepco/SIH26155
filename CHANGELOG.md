@@ -5,16 +5,17 @@ plan in [docs/12-execution-plan.md](docs/12-execution-plan.md).
 
 ## [Unreleased] — Phases 2 to 5 (21 Sep 2026)
 
-Everything the plan called specified is now built. 224 tests.
+Everything the plan called specified is now built. 227 tests.
 
 ### Added
 
-- **The learning layer (Tiers 1–3).** Structural inference for an unknown grammar; a lexical
-  proposer (TF-IDF over words and character trigrams) that needs no model and is deterministic;
-  an optional local model on loopback that is only ever asked to *choose* among candidates and
-  point at the value token, never to write a pattern; the training console; and **signed Vendor
-  Adapter Packs** — data only, a fixed transform library, Ed25519 signatures and a trust store
-  that refuses an unknown signer. Measured on RouterOS with its parser held out: 7 of 9 fields.
+- **The learning layer (Tiers 1–3).** Structural inference for an unknown grammar; a
+  deterministic proposer (TF-IDF over words and character trigrams) that needs no model; and
+  **Qwen2.5-Coder-7B served by Ollama on loopback**, opt-in, only ever asked to *choose* among
+  candidates and point at the value token, never to write a pattern. Plus the training console
+  and **signed Vendor Adapter Packs** — data only, a fixed transform library, Ed25519 signatures
+  and a trust store that refuses an unknown signer. Measured on RouterOS with its parser held
+  out: **9 of 9 fields** with the model, 7 without.
 - **XCCDF 1.1/1.2 importer.** A DISA benchmark becomes rules the engine loads, through explicit
   bindings, verified against real BIND and Firefox STIG content. No standard text is reproduced,
   only identifiers.
@@ -45,6 +46,15 @@ Everything the plan called specified is now built. 224 tests.
   but called `urlopen`, whose default opener reads `http_proxy`. On a host with a corporate proxy
   — the kind that also has an air gap — every prompt, customer configuration lines included,
   would have gone to that proxy. Loopback is now enforced in the transport.
+- **A model could set its own confidence.** Running the real 7B against the unseen Huawei fixture,
+  `stelnet server enable` — VRP's *SSH* server — came back as `mgmt.telnet_enabled` at 0.95. Our
+  own evidence for that field on that line is 0.24, but the self-reported number was passed
+  straight through, so a security-relevant inversion cleared the 0.85 auto-accept gate. Confidence
+  now comes from the lexical evidence score and a model may only lower it, never raise it.
+- **A model merely running was adopted.** `default_proposer()` used whatever was listening on
+  loopback, so installing Ollama silently changed behaviour and made the suite non-hermetic —
+  20s to over 10 minutes, quietly doing real inference. Now opt-in via `CRUCIBLE_OLLAMA=1`,
+  because an audit has to give the same answer twice.
 - **Fleet correlation was quadratic.** A 200-device audit spent 110.9s of 2m6s in path search.
   One breadth-first sweep per (segment, port) gives identical findings in 4.0s.
 - One unreadable device no longer aborts the fleet; failures are reported per device, and an

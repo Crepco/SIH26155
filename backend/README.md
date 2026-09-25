@@ -2,7 +2,7 @@
 
 FastAPI service. Everything from an uploaded file to a signed PDF.
 
-**Status: Phases 1 to 5 complete.** Every package here is implemented and covered by 224 tests
+**Status: Phases 1 to 5 complete.** Every package here is implemented and covered by 227 tests
 (`python tests/run_tests.py`, no pytest required) — `ingest`, `fingerprint`, `parsers`, `ir`,
 `policy`, `report`, `ledger`, `api`, `training`, `graph`, `sandbox` and `validation`. The one
 package that needs anything beyond the seven runtime dependencies is `sandbox`, which boots a

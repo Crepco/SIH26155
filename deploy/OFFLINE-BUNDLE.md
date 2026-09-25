@@ -16,9 +16,12 @@ bundle and complete a full audit.** That is tested, not asserted — see *How it
 | `INSTALL.md` and a manifest | Someone outside the team has to follow it cold |
 
 The console needs nothing else: it is plain HTML, CSS and JavaScript with no build step, no
-bundler and no font or icon fetched from anywhere (ADR 0007). There is no model in the bundle,
-because the default proposer is lexical and needs none (ADR 0003); a deployment that wants
-Ollama installs it separately and binds it to loopback.
+bundler and no font or icon fetched from anywhere (ADR 0007).
+
+Model weights are the one thing not in the bundle. The default proposer is deterministic and
+needs none (ADR 0003), so an installation is complete and fully functional without them; a
+deployment that wants the local Qwen2.5-Coder-7B installs Ollama and loads the weights alongside.
+Folding the 4.7 GB blob into the archive is mechanical and not yet done.
 
 ## How it is built
 
@@ -68,7 +71,7 @@ A clean run:
   ok    archive digest matches
   ok    manifest verifies (227 files)
   ok    installed from vendored wheels with no package index
-  ok    the suite passes from the installed bundle (224 passed)
+  ok    the suite passes from the installed bundle (227 passed)
   ok    a full audit ran and wrote a ledger
   ok    the ledger verifies INTACT
 ```
