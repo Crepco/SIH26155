@@ -28,12 +28,22 @@ else
 fi
 
 # 2. No external asset host referenced by anything the browser loads.
-if grep -rniE "(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)" \
-     frontend backend --include="*.js" --include="*.css" --include="*.html" --include="*.py" \
-     --exclude-dir=tests 2>/dev/null; then
+#
+#    Scanned across tracked files only. A plain recursive grep also reads
+#    whatever virtualenv, cache or build directory happens to be sitting in the
+#    tree - and third-party packages are full of CDN URLs in their own source,
+#    so it reports a failure that is nothing to do with what we ship. A check
+#    that cries wolf is a check people learn to ignore. What is committed is
+#    what ships, so that is what gets scanned.
+assets=$(git ls-files -- 'frontend/*' 'backend/*' \
+           ':!backend/tests/*' \
+         | grep -E "\.(js|css|html|py)$" || true)
+if [ -n "${assets}" ] && echo "${assets}" | xargs grep -niE \
+     "(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)" \
+     2>/dev/null; then
   fail "an external asset host is referenced (docs/11)"
 else
-  pass "no external asset host in any shipped asset"
+  pass "no external asset host in any shipped asset ($(echo "${assets}" | wc -l) files)"
 fi
 
 # 3. Nothing but loopback in the model layer. Every URL it names is extracted
