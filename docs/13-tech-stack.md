@@ -25,15 +25,23 @@ by six students in three weeks**. A dependency that fails all three does not ent
 
 | Component | Choice | Why |
 |-----------|--------|-----|
-| Local model runtime | **Ollama** + Qwen2.5-Coder-7B (or Llama 3.1 8B), quantised | The air-gap requirement is non-negotiable. A coder-tuned model reasons about CLI syntax better than a general chat model |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) | Small, fast, fully local. Powers similarity transfer: a command learned on Vendor A suggests a mapping for a structurally similar command on Vendor B |
-| Vector store | ChromaDB or FAISS | Local, embedded, no server. Chroma is faster to build against; FAISS is faster at scale |
+| Local model runtime | **Ollama** + Qwen2.5-Coder-7B-Instruct, q4_K_M | The air-gap requirement is non-negotiable. A coder-tuned model reasons about CLI syntax better than a general chat model. Loopback-only, enforced in the transport |
+| Lexical retrieval | TF-IDF over words and character trigrams, in-process | Replaced the planned embedding stack. The corpus is a few dozen field descriptions, not a document store: lexical retrieval scores better on it, needs no weights, and an auditor can read why a field was suggested |
 | Structural inference | Custom tokeniser | Detects brace / indent / flat-command grammar. Deterministic, no model needed — this tier exists specifically to reduce how often we invoke the model |
 | Adapter packs | YAML + Ed25519 signatures (`cryptography`) | Portable, human-readable, verifiable provenance. Signing matters because a pack is executable knowledge |
+
+Neither sentence-transformers nor a vector store survived contact with the problem. Both were
+planned; both turned out to be machinery for a retrieval task that a few hundred lines of TF-IDF
+does better, with no weights to ship and no similarity score an administrator has to take on
+trust.
 
 Note the discipline: the model is invoked only on lines that survived Tiers 0 and 1 — typically a
 very small fraction of a file. That is what makes a 7B model on a laptop viable, and it is also
 why context limits never become a problem.
+
+The two proposers are measured against each other on a held-out vendor, and the model earns its
+place: 9 of 9 fields against the deterministic proposer's 7 ([docs/16](16-validation-plan.md)).
+It remains opt-in, so a deployment without a GPU still learns vendors.
 
 ## Compliance engine
 
