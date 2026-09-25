@@ -13,8 +13,9 @@ So air-gap is not a feature. It is the operating environment.
 
 | Claim | Operational test |
 |-------|------------------|
-| No inference leaves the host | Ollama bound to loopback, model pre-pulled into the bundle, no registry configured |
-| No embeddings leave the host | sentence-transformers weights vendored in the bundle, `HF_HUB_OFFLINE` set |
+| No inference leaves the host | Ollama refused any address but loopback, in the transport itself — an empty `ProxyHandler`, so a proxy configured in the environment cannot capture a prompt |
+| No model is reached by accident | The model is opt-in (`CRUCIBLE_OLLAMA=1`). One merely listening on loopback is not adopted |
+| No retrieval weights to leak | There are none. Tier 2's default retrieval is in-process TF-IDF, not an embedding model |
 | No package fetch at install time | Wheels vendored; installation runs with no index configured |
 | No frontend asset fetch | Fonts, icons and styles bundled. No CDN reference anywhere in the build output |
 | No telemetry, no update check | Disabled at the dependency level, verified in CI |
@@ -38,11 +39,19 @@ Three mechanisms, because a rule nobody checks is a rule that decays:
 ## The offline installation bundle
 
 "Air-gapped" has to mean an installer that works with the cable unplugged, not an aspiration.
-The bundle contains: container images, the quantised model, embedding weights, Python wheels,
-frontend build output, the rule set, the IR and rule schemas, and the VyOS image for Crucible.
+The bundle contains the product, a wheel for every dependency, the rule set, the IR and rule
+schemas, the corpus labels and the Crucible twin image. 17 MB, 227 files, each with a SHA-256 in
+a manifest.
 
 It is produced by a build step, not assembled by hand, and the definition of done is that a
-machine which has never had internet access can install and run a complete audit from it.
+machine which has never had internet access can install and run a complete audit from it — which
+`scripts/verify-offline-bundle.sh` tests by installing with no package index and every proxy
+variable pointed at the discard port, then running the suite, a full audit and a ledger check
+from the installed copy.
+
+Model weights are the one thing not yet folded in. A deployment that wants the local model
+installs Ollama and loads the weights alongside the bundle; the audit pipeline is unaffected
+without them, because the deterministic proposer is the default.
 
 ## The demo consequence
 
