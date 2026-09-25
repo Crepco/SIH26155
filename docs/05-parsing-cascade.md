@@ -20,7 +20,7 @@ never returns a verdict, and never sees enough text to hit a context limit.
             semantics attached. Deterministic. No model involved.
             | nodes whose MEANING is still unknown fall through
             v
-    Tier 2  local model + embeddings PROPOSE A MAPPING
+    Tier 2  lexical retrieval, or a local model, PROPOSES A MAPPING
             "set admintimeout 10"  ->  mgmt.idle_timeout_min   (confidence 0.86)
             output is a candidate extraction rule, never a pass or a fail
             | proposals below the confidence threshold fall through

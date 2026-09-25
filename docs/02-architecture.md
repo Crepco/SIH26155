@@ -23,7 +23,7 @@ requirement, and it is what makes the verification sandbox affordable.
          Tier 1  structural inference -> generic config tree
                  (detect brace / indent / flat-command grammar)
             | semantically unknown nodes fall through
-         Tier 2  local LLM + embeddings PROPOSE A MAPPING
+         Tier 2  lexical retrieval, or a local model, PROPOSES A MAPPING
                  "set admintimeout 10"  ->  mgmt.idle_timeout_min
             | low confidence
          Tier 3  Interactive Training GUI -> admin confirms
@@ -99,8 +99,9 @@ DEMONSTRATED (proven live against a twin), ASSERTED (rule matched, not runtime-t
 
 ## Differentiators beyond the baseline
 
-**Air-gapped, and proven on stage.** Ollama serving a quantised model, local sentence-transformer
-embeddings, no outbound calls. During the demo the machine is visibly disconnected and the audit
+**Air-gapped, and proven on stage.** A deterministic proposer that needs no model at all, and
+optionally Ollama serving a quantised model that the transport itself refuses to reach anywhere
+but loopback. No outbound calls. During the demo the machine is visibly disconnected and the audit
 continues. See [11](11-air-gap.md).
 
 **Learn a new vendor live, then export it.** The training loop emits a signed, portable Vendor
