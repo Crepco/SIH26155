@@ -114,6 +114,15 @@ def test_ollama_must_be_on_loopback():
 
 class _FakeOllama(BaseHTTPRequestHandler):
     reply: ClassVar[dict[str, object]] = {}
+    #: What /api/tags reports as pulled, so `available()` can be exercised.
+    models: ClassVar[tuple[str, ...]] = ("test-model",)
+
+    def do_GET(self) -> None:
+        body = json.dumps({"models": [{"name": n} for n in type(self).models]}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0))
@@ -178,6 +187,83 @@ def test_a_configured_http_proxy_never_sees_a_prompt():
 
     assert proposal is not None
     assert proposal.source == "ollama:test-model", "the proxy intercepted the call"
+
+
+def test_a_model_that_merely_happens_to_be_running_is_not_used():
+    """Reachable is not the same as asked for.
+
+    An audit must give the same answer twice. If the proposer adopted any
+    daemon listening on loopback, two machines would disagree about the same
+    configuration because somebody installed Ollama for an unrelated reason -
+    and the suite would exercise different code depending on the developer's
+    laptop, which is how this was found.
+    """
+    from crucible.training.proposer import default_proposer
+
+    server, url = _serve({"ir_path": "ntp.servers", "value_token": None, "confidence": 0.9})
+    restore = os.environ.pop("CRUCIBLE_OLLAMA", None)
+    try:
+        assert default_proposer(url, "test-model").name == "lexical", (
+            "a reachable model was adopted without being asked for"
+        )
+        os.environ["CRUCIBLE_OLLAMA"] = "1"
+        opted_in = default_proposer(url, "test-model")
+        assert opted_in.name == "ollama:test-model", "explicit opt-in was ignored"
+        assert default_proposer(url, "test-model", enabled=False).name == "lexical"
+    finally:
+        os.environ.pop("CRUCIBLE_OLLAMA", None)
+        if restore is not None:
+            os.environ["CRUCIBLE_OLLAMA"] = restore
+        server.shutdown()
+
+
+def test_a_confident_model_cannot_raise_confidence_above_the_evidence():
+    """A model's opinion of itself may lower our confidence, never raise it.
+
+    This is the real case that prompted the rule. Huawei's `stelnet server
+    enable` is SSH, not telnet, and a local 7B called it mgmt.telnet_enabled
+    at 0.95 - a security-relevant inversion, confident enough to sail past the
+    0.85 auto-accept gate and be signed into a pack. Our own lexical evidence
+    for that field on that line is 0.24, and that is what must govern.
+    """
+    server, url = _serve(
+        {"ir_path": "mgmt.telnet_enabled", "value_token": None, "confidence": 0.99}
+    )
+    try:
+        proposal = OllamaProposer(url, "test-model").propose("stelnet server enable")
+    finally:
+        server.shutdown()
+
+    assert proposal is not None
+    assert proposal.ir_path == "mgmt.telnet_enabled", "the model still chooses the field"
+    assert proposal.confidence < 0.6, (
+        f"weak evidence must stay weak, got {proposal.confidence:.2f} - "
+        "a confidently wrong mapping would be auto-applied"
+    )
+
+
+def test_the_model_may_lower_confidence_but_the_evidence_caps_it():
+    """An unsure model is heard: the lower of the two numbers wins."""
+    line = "/ip service set telnet disabled=no port=23"
+    confident, url_a = _serve(
+        {"ir_path": "mgmt.telnet_enabled", "value_token": "no", "confidence": 0.95}
+    )
+    try:
+        high = OllamaProposer(url_a, "test-model").propose(line)
+    finally:
+        confident.shutdown()
+
+    unsure, url_b = _serve(
+        {"ir_path": "mgmt.telnet_enabled", "value_token": "no", "confidence": 0.3}
+    )
+    try:
+        low = OllamaProposer(url_b, "test-model").propose(line)
+    finally:
+        unsure.shutdown()
+
+    assert high is not None and low is not None
+    assert low.confidence <= 0.3, "a model that doubts itself must be believed downwards"
+    assert high.confidence > low.confidence
 
 
 def test_a_model_that_names_a_field_outside_the_candidates_is_overruled():

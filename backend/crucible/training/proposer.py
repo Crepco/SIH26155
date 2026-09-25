@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import urllib.error
 import urllib.request
@@ -478,6 +479,54 @@ class LexicalProposer:
         ]
         return sorted(scored, key=lambda item: item[1], reverse=True)
 
+    def _evidence(
+        self,
+        spec: FieldSpec,
+        text: str,
+        ranked: list[tuple[FieldSpec, float]],
+        position: int,
+    ) -> float:
+        """How much *our own* evidence supports mapping this line to ``spec``.
+
+        Similarity carries most of the weight; a clear margin over the next
+        field adds the rest. Falling back to a lower-ranked field because the
+        top one had no token of the right shape costs confidence, because it
+        is weaker evidence.
+
+        This is the only thing in the system that may set a confidence. A
+        model's opinion of its own answer cannot, which is what
+        :meth:`OllamaProposer.propose` uses it for.
+        """
+        if not ranked or position >= len(ranked):
+            return 0.0
+        top_score = ranked[0][1]
+        score = ranked[position][1]
+        runner_up = ranked[position + 1][1] if position + 1 < len(ranked) else 0.0
+        margin = (score - runner_up) / score if score else 0.0
+        confidence = (0.15 + 0.7 * min(score / 0.6, 1.0) + 0.15 * margin) * (
+            1.0 if position == 0 else 0.75 * score / top_score if top_score else 0.0
+        )
+        line_words = set(_words(text, self._known))
+        if not any(w in line_words for w, weight in spec.keywords.items() if weight >= 1.0):
+            # Similar only through context or character overlap: no word the
+            # field is actually known by appears on the line. Weak evidence,
+            # so it is sent to a human rather than applied.
+            confidence *= 0.5
+        return confidence
+
+    def evidence_for(
+        self, spec: FieldSpec, text: str, ranked: list[tuple[FieldSpec, float]]
+    ) -> float:
+        """The evidence score for a field chosen by someone else - a model.
+
+        Zero when the field is not among the ranked candidates at all: nothing
+        we can measure supports it, so nothing may be auto-applied from it.
+        """
+        for position, (candidate, _score) in enumerate(ranked):
+            if candidate.path == spec.path:
+                return self._evidence(spec, text, ranked, position)
+        return 0.0
+
     def propose(self, text: str, context: Sequence[str] = ()) -> Proposal | None:
         ranked = self.rank(text, context)
         if not ranked or ranked[0][1] < MIN_SIMILARITY:
@@ -485,25 +534,10 @@ class LexicalProposer:
             # least-bad field would only teach an administrator to click
             # "accept" without reading.
             return None
-        top_score = ranked[0][1]
-        for position, (spec, score) in enumerate(ranked[:4]):
-            runner_up = ranked[position + 1][1] if position + 1 < len(ranked) else 0.0
-            margin = (score - runner_up) / score if score else 0.0
-            # Similarity carries most of the weight; a clear margin over the
-            # next field adds the rest. Falling back to a lower-ranked field
-            # because the top one had no token of the right shape costs
-            # confidence, because it is weaker evidence.
+        for position, (spec, _score) in enumerate(ranked[:4]):
             if position > 1:
                 break
-            confidence = (0.15 + 0.7 * min(score / 0.6, 1.0) + 0.15 * margin) * (
-                1.0 if position == 0 else 0.75 * score / top_score
-            )
-            line_words = set(_words(text, self._known))
-            if not any(w in line_words for w, weight in spec.keywords.items() if weight >= 1.0):
-                # Similar only through context or character overlap: no word
-                # the field is actually known by appears on the line. Weak
-                # evidence, so it is sent to a human rather than applied.
-                confidence *= 0.5
+            confidence = self._evidence(spec, text, ranked, position)
             if confidence < MIN_CONFIDENCE:
                 continue
             built = build_mapping(spec, text, context, confidence=confidence)
@@ -604,7 +638,11 @@ class OllamaProposer:
         return self.model in names
 
     def propose(self, text: str, context: Sequence[str] = ()) -> Proposal | None:
-        ranked = self.fallback.rank(text, context)[:6]
+        # The full ranking scores the evidence; only the top few are shown to
+        # the model. Scoring against the truncated list would read a margin
+        # over nothing for the last candidate and inflate its confidence.
+        full_ranking = self.fallback.rank(text, context)
+        ranked = full_ranking[:6]
         lexical = self.fallback.propose(text, context)
         candidates = "\n".join(f"- {spec.path}: {spec.description}" for spec, _ in ranked)
         prompt = _PROMPT.format(
@@ -634,9 +672,22 @@ class OllamaProposer:
         if spec is None:
             return _relabel(lexical, "lexical (model declined)")
         hint = str(token) if token not in (None, "", "null") and str(token) in text else None
-        built = build_mapping(
-            spec, text, context, confidence=min(max(model_confidence, 0.0), 0.95), value_hint=hint
-        )
+        # The model chooses the field. It does NOT get to say how sure we are.
+        #
+        # A self-reported confidence is not calibrated: measured against the
+        # held-out vendors, a 3B model returned 0.95 for nearly every answer,
+        # including eight lines that carry no fact at all, and a 7B called
+        # Huawei's `stelnet server enable` - which is SSH - telnet_enabled at
+        # 0.95. Passed straight through, both sail past the auto-accept gate
+        # and a wrong mapping gets signed into a pack.
+        #
+        # So the model's number may only ever *lower* the confidence our own
+        # evidence supports, never raise it. A model that is unsure is heard;
+        # a model that is confidently wrong is capped at what we can measure,
+        # and the disagreement goes to a human at Tier 3 where it belongs.
+        evidence = self.fallback.evidence_for(spec, text, full_ranking)
+        confidence = min(evidence, max(model_confidence, 0.0), 0.95)
+        built = build_mapping(spec, text, context, confidence=confidence, value_hint=hint)
         if built is None:
             return _relabel(lexical, "lexical (model choice had no usable value)")
         mapping, preview = built
@@ -665,9 +716,30 @@ def _relabel(proposal: Proposal | None, source: str) -> Proposal | None:
     )
 
 
-def default_proposer(url: str | None = None, model: str | None = None) -> Proposer:
-    """Ollama when it is running locally with the model pulled; lexical otherwise."""
+def default_proposer(
+    url: str | None = None, model: str | None = None, *, enabled: bool | None = None
+) -> Proposer:
+    """The lexical proposer, unless a model is explicitly asked for.
+
+    Opting in is deliberate: pass ``enabled=True`` (the CLI's ``--ollama``) or
+    set ``CRUCIBLE_OLLAMA=1``.
+
+    It would be friendlier to notice a model already listening on loopback and
+    use it. That is exactly what this refuses to do. An audit has to give the
+    same answer twice, and picking up a daemon that happens to be running would
+    mean two machines auditing the same configuration disagree because somebody
+    installed Ollama for an unrelated reason. It also made the test suite
+    non-hermetic: the same suite took seconds or minutes, and exercised
+    different code, depending on what was listening.
+
+    Off by default is what the README promises, so off by default is what this
+    does.
+    """
     lexical = LexicalProposer()
+    if enabled is None:
+        enabled = os.environ.get("CRUCIBLE_OLLAMA", "").strip().lower() in {"1", "true", "yes"}
+    if not enabled:
+        return lexical
     try:
         candidate = OllamaProposer(
             url or DEFAULT_OLLAMA_URL, model or DEFAULT_OLLAMA_MODEL, fallback=lexical
