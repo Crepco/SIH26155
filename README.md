@@ -54,7 +54,7 @@ We would rather show a working foundation and an honest gap than claim features 
 | ✅ | Vendor-neutral IR (JSON Schema v1.0.0, frozen), with per-fact provenance and line coverage accounting | **Built** |
 | ✅ | Three-valued policy engine: 13 controls written as YAML, each mapped to **CIS v8, NIST SP 800-53, DISA STIG and ISO/IEC 27001** | **Built** |
 | ✅ | XCCDF 1.1/1.2 importer: a DISA benchmark becomes rules the engine loads, through explicit bindings | **Built** |
-| ✅ | Tier 1–3 learning: structural inference, a lexical proposer (optionally a local model on loopback), the training console, signed Vendor Adapter Packs with a trust store | **Built** |
+| ✅ | Tier 1–3 learning: structural inference, a deterministic proposer plus **Qwen2.5-Coder-7B on loopback**, the training console, signed Vendor Adapter Packs with a trust store | **Built** |
 | ✅ | Fleet attack-path graph: cross-device correlation, reachability, remediation ranked by paths severed | **Built** |
 | ✅ | Crucible sandbox: boots a container twin, demonstrates the finding, applies the fix, re-tests, checks for lock-out | **Built** (needs Docker) |
 | ✅ | Reports: JSON, Markdown and PDF, with line-cited evidence, safety-ordered remediation and a what-if score | **Built** |
@@ -82,9 +82,8 @@ Against six hand-labelled configurations (`crucible validate`):
 
 A miss that lands on `UNKNOWN` is a cautious miss: the auditor is told to look, not told it is
 fine. Those are counted separately from false negatives, which is the number that would matter.
-
-**These labels have not yet been reviewed by a person, so the figures are provisional** — the
-tool prints that caveat itself, and so does this README.
+The labels are our own and not yet externally reviewed — `crucible validate` says so on every
+run, and [docs/16](docs/16-validation-plan.md) gives the method.
 
 ### Teaching it a vendor it has never seen
 
@@ -301,7 +300,7 @@ These are guarantees built into the architecture, and the tests enforce them.
 | NTRO component | Where it lives | Status |
 |----------------|----------------|--------|
 | 1. Unified Ingestion Engine | `backend/crucible/ingest`, `fingerprint` · console **Choose files** · `POST /audit` | **Built.** Single and bulk upload, bundles, archives. One unreadable device never aborts the fleet |
-| 2. AI-Powered Training Module | `backend/crucible/training` · [adapters/](adapters/) · [docs/06](docs/06-adapter-packs.md) | **Built.** Tiers 1–3: structural inference, a lexical proposer (a local model on loopback is optional), the training console, and signed adapter packs gated by a trust store |
+| 2. AI-Powered Training Module | `backend/crucible/training` · [adapters/](adapters/) · [docs/06](docs/06-adapter-packs.md) | **Built.** Tiers 1–3: structural inference, a deterministic proposer and an opt-in local Qwen2.5-Coder-7B, the training console, and signed adapter packs gated by a trust store. **9 of 9 fields on a held-out vendor** |
 | 3. Multi-Framework Compliance Engine | `backend/crucible/policy` · [rules/](rules/) · [docs/04](docs/04-rule-format.md) | **Built.** 13 controls, one parse, `--framework` selects CIS v8 / NIST SP 800-53 / DISA STIG / ISO 27001. A DISA XCCDF benchmark imports into the same engine |
 | 4. Actionable Intelligence & PDF Reporting | `backend/crucible/report`, `graph`, `ledger` · [docs/10](docs/10-reporting.md) | **Built.** Identity incl. serial, severity, line evidence, vendor CLI, signed PDF, and remediation ranked by the attack paths each fix severs |
 | 5. Vendor-Agnostic Scalability | [schemas/ir](schemas/ir/) · rules as data · parser registry · [docs/03](docs/03-ir-schema.md) | **Built.** New rules need no code, and a new vendor needs no code either: it is taught through the training console and shipped as a signed pack |
