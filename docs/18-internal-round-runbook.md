@@ -221,8 +221,14 @@ believing the rest.
 > 0, so on those the model layer has nothing to do. Show me a vendor we do not parse and you will
 > see it work. ADR 0004."
 >
-> Then open the TRAIN view, or run `propose --hold-out mikrotik`. Held out that way, it recovers
-> 7 of 9 fields cold.
+> Then open the TRAIN view, or run `propose --hold-out mikrotik`. Held out that way it recovers
+> **9 of 9 fields** with the local Qwen2.5-Coder-7B, and 7 of 9 with the deterministic proposer
+> and no model at all. Both numbers are worth giving: the second is what a customer without a
+> GPU gets, and it still works.
+>
+> If asked why the model is off by default: "because an audit has to give the same answer twice.
+> A model that gets picked up merely because it happens to be running would make two machines
+> disagree about the same configuration. You turn it on deliberately."
 
 **"Why is so much UNKNOWN? That looks like it failed."**
 > "It is the feature. Those are controls where the configuration genuinely does not say. Every
