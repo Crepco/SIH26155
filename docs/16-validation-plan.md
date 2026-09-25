@@ -58,8 +58,39 @@ surviving export and import.
 
 **Result:** passes, and it is a test rather than a demo — `test_train_a_vendor_cold_export_import_and_audit_elsewhere`
 holds MikroTik's parser out of the build, trains from the residue, signs a pack, imports it into a
-second instance and audits there. Measured cold on RouterOS, Tier 2 recovers 7 of 9 fields
-(`crucible tier2-eval`). The two it misses go to a human at Tier 3, which is the design.
+second instance and audits there.
+
+### 2a. Tier 2 measured with and without a local model
+
+`crucible tier2-eval tests/fixtures/devices/routeros-branch-01`, MikroTik's parser held out. The
+vocabulary contains no RouterOS syntax and a test enforces that, so this is transfer into a
+grammar the system has never parsed. Deterministic at temperature 0; both figures re-ran
+identically.
+
+| Proposer | Field accuracy | Value agreement |
+|---|---|---|
+| Lexical (offline default, no model) | 7/9 | 7/9 |
+| `qwen2.5-coder:3b-instruct-q4_K_M` | 7/9 | 7/9 |
+| `qwen2.5-coder:7b-instruct-q4_K_M` | **9/9** | 8/9 |
+
+The 7B resolves both lines the lexical proposer gets wrong, including `/ip service set www-ssl
+disabled=yes` → `mgmt.https_enabled`. Cost: ~116s for one device's residue on a 4 GB laptop GPU
+with partial CPU offload, against well under a second for lexical. That is a training-time cost,
+paid once per vendor, not per audit.
+
+**What measuring it actually found.** On the unseen Huawei VRP fixture the same 7B read
+`stelnet server enable` — which is VRP's *SSH* server — as `mgmt.telnet_enabled`, at 0.95
+confidence. The 3B was worse: 0.95 on nearly every line, including eight that carry no fact.
+Because the code passed the model's self-reported confidence straight through, a
+security-relevant inversion cleared the 0.85 auto-accept gate and would have been signed into an
+adapter pack.
+
+A self-reported confidence is not a measurement. Confidence now comes from the lexical evidence
+score, and the model's number may only lower it, never raise it. The stelnet mapping lands at
+0.24 and goes to a human; field accuracy stays at 9/9. Two tests pin it.
+
+This is the clearest instance of the principle the architecture is built on: **the AI proposes,
+the engine disposes** — and the engine is what decides how much the proposal is trusted.
 
 ## 3. Ground-truth accuracy
 
