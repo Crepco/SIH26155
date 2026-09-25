@@ -97,7 +97,9 @@ def register_learning(app: FastAPI, *, rules: Path, data: Path, home: Home) -> N
     sessions = _Sessions()
 
     def proposer() -> Any:
-        # Ollama when a local model is up; the offline lexical proposer otherwise.
+        # The offline lexical proposer, unless CRUCIBLE_OLLAMA says otherwise.
+        # Deliberately not "whatever happens to be listening on 11434": see
+        # default_proposer.
         return default_proposer()
 
     # -- vocabulary -------------------------------------------------------------

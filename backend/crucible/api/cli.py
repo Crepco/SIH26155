@@ -380,7 +380,7 @@ def _proposer(args: argparse.Namespace) -> Proposer:
     from crucible.training.proposer import LexicalProposer, default_proposer
 
     if getattr(args, "ollama", False):
-        proposer = default_proposer(args.ollama_url, args.ollama_model)
+        proposer = default_proposer(args.ollama_url, args.ollama_model, enabled=True)
         if proposer.name == "lexical":
             print("  ollama not reachable on loopback with that model - using the lexical proposer")
         return proposer
