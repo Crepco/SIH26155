@@ -86,6 +86,27 @@ fine. Those are counted separately from false negatives, which is the number tha
 **These labels have not yet been reviewed by a person, so the figures are provisional** — the
 tool prints that caveat itself, and so does this README.
 
+### Teaching it a vendor it has never seen
+
+The claim NTRO actually asked about. MikroTik's parser is held out of the build, and the
+vocabulary the proposer learns from contains **no RouterOS syntax** — a test enforces that, so
+this is transfer into an unfamiliar grammar rather than recall. `crucible tier2-eval`:
+
+| Proposer | Fields read correctly |
+|---|---|
+| Lexical — the offline default, no model at all | 7 of 9 |
+| `qwen2.5-coder:7b` running locally on loopback | **9 of 9** |
+
+Both are deterministic and reproduce exactly. The model is optional and **off unless you ask for
+it** (`CRUCIBLE_OLLAMA=1`), because an audit that changes its answer depending on what happens to
+be installed is not an audit.
+
+Measuring the model is also what caught the sharpest bug in the project: on an unseen Huawei
+config it read `stelnet server enable` — VRP's *SSH* server — as Telnet, at 0.95 confidence,
+which would have auto-installed a security-relevant inversion. A model's opinion of itself is
+not a measurement, so confidence now comes from our own evidence and the model may only lower
+it. Details in [docs/16](docs/16-validation-plan.md).
+
 ---
 
 ## Setup (five minutes, no internet needed after install)
