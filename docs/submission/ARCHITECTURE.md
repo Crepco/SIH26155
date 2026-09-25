@@ -73,19 +73,20 @@ applied deterministically. Because context limits only ever apply to single unre
 A device configuration maps every ACL, trust relationship and credential hash. For NCIIPC, a cloud
 LLM API is a hard disqualifier, whatever the preference. The system makes **zero outbound calls**,
 and there is no cloud SDK in the dependency tree. The console ships no web fonts or CDN assets, and
-a test fails the build if any asset reaches off the host. The default proposer is lexical and needs
-no model at all; where a local model is wanted, the transport itself refuses any address that is
-not loopback — a proxy configured in the environment cannot capture a prompt
-([ADR 0003](../adr/0003-local-models-only.md)). The offline bundle is verified by installing it
-with no package index and no usable proxy, then running the suite and a full audit from the
-installed copy.
+a test fails the build if any asset reaches off the host. Tier 2 runs a deterministic proposer
+that needs no model at all, and optionally **Qwen2.5-Coder-7B served by Ollama on loopback** —
+where the transport itself, not merely the URL, refuses any other address, so a proxy configured
+in the environment cannot capture a prompt ([ADR 0003](../adr/0003-local-models-only.md)). The
+model is opt-in: one merely listening on loopback is never adopted, because an audit must give
+the same answer twice. The offline bundle is verified by installing it with no package index and
+no usable proxy, then running the suite and a full audit from the installed copy.
 
 ## 05 · Mapping to the five NTRO components
 
 | Component | Where it lives | What it does | Status |
 |-----------|----------------|--------------|--------|
 | 1 Unified ingestion | `ingest/` `fingerprint/`, console, `POST /audit` | Single or bulk upload, directories, zip archives and device bundles (config plus `show version` read as one device). Refuses path traversal, symlinks and zip bombs. One unreadable device never aborts the fleet. | **Built** |
-| 2 AI training module | `training/` `adapters/`, TRAIN console | Tiers 1–3: infer structure, propose a field mapping, admin confirms in a low-code console. Exported as a **signed, portable Vendor Adapter Pack** — data only, a fixed transform library, and a trust store that refuses an unknown signer. Measured cold on RouterOS with its parser held out: 7 of 9 fields. | **Built** |
+| 2 AI training module | `training/` `adapters/`, TRAIN console | Tiers 1–3: infer structure, propose a field mapping, admin confirms in a low-code console. Exported as a **signed, portable Vendor Adapter Pack** — data only, a fixed transform library, and a trust store that refuses an unknown signer. Measured cold on RouterOS with its parser held out: **9 of 9 fields** with the local model, 7 without it. | **Built** |
 | 3 Multi-framework engine | `policy/` `rules/*.yaml` | A control is data. Each of the 13 controls maps to CIS v8, NIST SP 800-53, DISA STIG and ISO 27001, and `--framework` selects without re-parsing. A DISA **XCCDF 1.1/1.2 benchmark imports** into the same engine through explicit bindings. | **Built** |
 | 4 Reporting & PDF | `report/` `graph/` `ledger/` | A per-device PDF with identity (vendor, model, OS, **serial**), pass/fail by severity, line-cited evidence, vendor-specific remediation CLI, a what-if score, a coverage appendix, and a verification hash on every page. Remediation is ranked by the attack paths each fix severs. | **Built** |
 | 5 Vendor-agnostic scale | `schemas/ir`, parser registry | A frozen, versioned IR schema. New rules and frameworks need no code — and **neither does a new vendor**: it is taught in the console and shipped as a signed pack. | **Built** |
@@ -95,9 +96,11 @@ installed copy.
 **Tier 0**: deterministic parsers record provenance for every fact and account for every line.
 Unclaimed lines fall to **Tier 1**, which detects the grammar (brace, indent, flat) and builds a
 generic tree. Unknown nodes reach **Tier 2**, which proposes a mapping such as
-`set admintimeout 10` → `mgmt.idle_timeout_min`. The mapping is applied as a deterministic rule,
-*never* as a judgement. At low confidence, **Tier 3** asks an administrator and signs the confirmed
-mapping into an adapter pack, so the next run handles that line at Tier 0. A low-confidence
+`set admintimeout 10` → `mgmt.idle_timeout_min` — by lexical retrieval, or by a local model shown
+those candidates and asked only to choose among them. The mapping is applied as a deterministic
+rule, *never* as a judgement, and the model never sets its own confidence. At low confidence,
+**Tier 3** asks an administrator and signs the confirmed mapping into an adapter pack, so the
+next run handles that line at Tier 0. A low-confidence
 fingerprint runs no parser at all: an unknown device reports UNKNOWN instead of being misread.
 
 ## 07 · Crucible: demonstrated, not asserted
@@ -135,8 +138,9 @@ operational weight and no integrity ([ADR 0006](../adr/0006-no-permissioned-bloc
 Python 3.11 with seven runtime dependencies: PyYAML, ReportLab, cryptography, FastAPI, Uvicorn,
 python-multipart, httpx. The console is plain HTML/CSS/JS served by the API, with no build step
 ([ADR 0007](../adr/0007-plain-html-console.md)). The twin is an Alpine container built in this
-repository ([ADR 0008](../adr/0008-alpine-twin.md)). Optional: Ollama, on loopback only. One
-process, no database, no broker.
+repository ([ADR 0008](../adr/0008-alpine-twin.md)). Optionally Ollama serving
+Qwen2.5-Coder-7B-Instruct q4_K_M, loopback-only and opt-in. One process, no database, no
+broker.
 
 ## 11 · Measured on the current build
 
@@ -144,11 +148,16 @@ process, no database, no broker.
 |:---:|:---:|:---:|:---:|
 | tests passing | vendors audited, offline | mean line coverage | precision / recall |
 
-Precision and recall come from `crucible validate` against six hand-labelled configurations:
-37 true positives, **0 false positives**, nothing missed as a PASS, 4 missed as UNKNOWN — a
-cautious miss tells the auditor to look, and is counted separately from a false negative. Fact
-accuracy is 53 of 53. **These labels have not yet been reviewed by a person, so the figures are
-provisional**, and the tool prints that caveat itself.
+From `crucible validate` against six hand-labelled configurations: 37 true positives, **0 false
+positives**, nothing missed as a PASS, 4 missed as UNKNOWN — a cautious miss tells the auditor to
+look, and is counted separately from a false negative. Fact accuracy 53 of 53. The labels are our
+own and not yet externally reviewed; `crucible validate` says so on every run, and
+[docs/16](../16-validation-plan.md) gives the method.
+
+**Teaching an unseen vendor**, which is the capability NTRO asked for: with MikroTik's parser held
+out of the build and its syntax provably absent from the proposer's vocabulary — a test enforces
+that, so this is transfer and not recall — Tier 2 reads **9 of 9 fields** with the local model and
+7 of 9 without it.
 
 | Phase 0–1 · done | Phase 2 · done | Phase 3 · done | Phase 4 · done | Phase 5 · done | Open |
 |---|---|---|---|---|---|

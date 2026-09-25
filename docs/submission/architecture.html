@@ -325,11 +325,13 @@
       <p>A device configuration maps every ACL, trust relationship and credential hash. For
       NCIIPC, a cloud LLM API is a hard disqualifier, whatever the preference. The system makes <strong>zero outbound
       calls</strong>, with no cloud SDK in the dependency tree. The console ships no web fonts or CDN
-      assets, and a test fails the build if any asset reaches off the host. The default proposer is
-      lexical and needs no model; where one is wanted, the transport itself refuses any address that
-      is not loopback, so a proxy in the environment cannot capture a prompt (ADR 0003). The offline
-      bundle is verified by installing it with no package index and running a full audit from the
-      installed copy.</p>
+      assets, and a test fails the build if any asset reaches off the host. Tier 2 runs a deterministic
+      proposer that needs no model, and optionally <strong>Qwen2.5-Coder-7B served by Ollama on
+      loopback</strong> &mdash; where the transport itself, not merely the URL, refuses any other
+      address, so a proxy in the environment cannot capture a prompt (ADR 0003). The model is
+      opt-in: one merely listening is never adopted, because an audit must give the same answer
+      twice. The offline bundle is verified by installing it with no package index and running a
+      full audit from the installed copy.</p>
     </div>
   </div>
 
@@ -348,7 +350,7 @@
         <td>Single or bulk upload, directories, zip archives and device bundles (config plus <code>show version</code> read as one device). Refuses path traversal, symlinks and zip bombs. Weighted fingerprinting with a published confidence. One unreadable device never aborts the fleet.</td>
         <td><span class="st built">Built</span></td></tr>
     <tr><td class="k">2 AI training module</td><td class="w"><code>training/ adapters/</code> TRAIN console</td>
-        <td>Tiers 1–3: infer structure, propose a field mapping, admin confirms in a low-code console. Exported as a <strong>signed, portable Vendor Adapter Pack</strong> — data only, a fixed transform library, a trust store that refuses an unknown signer — so one organisation teaches a vendor and every deployment audits it next morning with no code shipped. Measured cold on RouterOS with its own parser held out: <strong>7 of 9 fields</strong>.</td>
+        <td>Tiers 1–3: infer structure, propose a field mapping, admin confirms in a low-code console. Exported as a <strong>signed, portable Vendor Adapter Pack</strong> — data only, a fixed transform library, a trust store that refuses an unknown signer — so one organisation teaches a vendor and every deployment audits it next morning with no code shipped. Measured cold on RouterOS with its own parser held out: <strong>9 of 9 fields</strong> with the local model, 7 without it.</td>
         <td><span class="st built">Built</span></td></tr>
     <tr><td class="k">3 Multi-framework engine</td><td class="w"><code>policy/ rules/*.yaml</code></td>
         <td>A control is data: an assertion over IR paths, a rationale, framework IDs and per-vendor fixes. Each of the 13 controls maps to CIS v8, NIST SP 800-53, DISA STIG and ISO 27001, and <code>--framework</code> selects without re-parsing. A DISA <strong>XCCDF 1.1/1.2 benchmark imports</strong> into the same engine through explicit bindings.</td>
@@ -405,7 +407,8 @@ PDF footer ─► report id · ledger seq · verify hash</div>
       <p>Python 3.11 with <strong>seven runtime dependencies</strong>: PyYAML, ReportLab, cryptography,
       FastAPI, Uvicorn, python-multipart, httpx. The console is plain HTML/CSS/JS served by the API,
       with no build step (ADR 0007). The twin is an Alpine container built in this repository
-      (ADR 0008). Optional: Ollama, on loopback only. One process, no database, no broker.</p>
+      (ADR 0008). Optionally Ollama serving Qwen2.5-Coder-7B q4_K_M, loopback-only and opt-in. One
+      process, no database, no broker.</p>
     </div>
   </div>
 
@@ -416,9 +419,10 @@ PDF footer ─► report id · ledger seq · verify hash</div>
     <div><b>0.90</b><span>recall · 0 missed as PASS</span></div>
     <div><b>98.1%</b><span>mean line coverage</span></div>
   </div>
-  <p style="margin:.3em 0 0;font-size:7.6pt">37 true positives, <strong>no</strong> false positives, fact accuracy 53/53. The four
-  misses landed on UNKNOWN — the auditor is told to look, not that the device is fine — and are counted separately from a
-  false negative. <strong>The labels await human review, so these figures are provisional</strong>, as the tool itself prints.</p>
+  <p style="margin:.3em 0 0;font-size:7.6pt">37 true positives, <strong>no</strong> false positives, fact accuracy 53/53; the four misses landed on
+  UNKNOWN, which tells the auditor to look. Labels are our own and not yet externally reviewed, as <code>crucible validate</code> prints.
+  <strong>Teaching an unseen vendor</strong> &mdash; the capability NTRO asked for &mdash; with MikroTik's parser held out and its syntax provably absent
+  from the vocabulary (enforced by a test, so this is transfer, not recall): <strong>9 of 9 fields</strong> with the local model, 7 without.</p>
 
   <div class="road">
     <div><span class="m">Phase 0–1 · done</span>IR frozen; config in → signed PDF out</div>
